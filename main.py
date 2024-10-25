@@ -2,40 +2,118 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 import time
 
+# Initialize WebDriver
 driver = webdriver.Chrome()
 
-# Open the webpage
+# Open the target webpage
 driver.get('https://www.bettilt504.com/pt/game/bac-bo/real')
+mainWindow = driver.window_handles[0]
 
-# Wait for the first iframe to load and switch to it
-while len(driver.find_elements(By.XPATH, '/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]/div/iframe')) == 0:
-    time.sleep(2)
+# Strategy settings
+strategyLimits = ['PPT=B', 'BBP=P']
+maxGales = 2
 
-iframe_1 = driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]/div/iframe')
-driver.switch_to.frame(iframe_1)
+# State variables
+isEntryAllowed = True
+isGreen = False
+isGaleActive = False
+isRed = False
+currentStrategy = []
+currentBet = []
+galeCount = 0
 
-# Wait for the second iframe inside the first iframe
-while len(driver.find_elements(By.XPATH, '/html/body/iframe')) == 0:
-    time.sleep(2)
+# Variables to store results
+resultsList = []
+prevResults = []
 
-iframe_2 = driver.find_element(By.XPATH, '/html/body/iframe')
-driver.switch_to.frame(iframe_2)
+def executeStrategy(resultsList):
+    """
+    Executes the betting strategy based on current results and state variables.
+    """
+    global isEntryAllowed, isGreen, isGaleActive, isRed, currentStrategy, currentBet, galeCount
 
-# Wait for the third iframe to load within the second iframe
-while len(driver.find_elements(By.XPATH, '/html/body/div[5]/div[2]/iframe')) == 0:
-    time.sleep(2)
+    if isEntryAllowed:
+        for limit in strategyLimits:
+            currentStrategy = list(limit.split('=')[0])
+            currentBet = limit.split('=')[1]
 
-iframe_3 = driver.find_element(By.XPATH, '/html/body/div[5]/div[2]/iframe')
-driver.switch_to.frame(iframe_3)
+            if resultsList[:len(currentStrategy)] == currentStrategy:
+                print(f'Entry on {currentBet}')
+                isEntryAllowed = False
+                isGreen = True
+                isGaleActive = True
+                break
+        return
 
-# Wait for the target element to load within the third iframe
-while len(driver.find_elements(By.XPATH, '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div')) == 0:
-    time.sleep(2)
+    elif resultsList[0] == currentBet and isGreen:
+        print('GREEN')
+        resetState()
+        return
 
-# Extract text from the target element
-result_element = driver.find_element(By.XPATH, '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div')
-results = result_element.text.split()
+    elif resultsList[0] == 'T' and isGreen:
+        print('GREEN - TIE')
+        resetState()
+        return
 
-print(results[::-1])
+    elif resultsList[0] == 'T' and resultsList[0] == currentBet and isGaleActive:
+        galeCount += 1
+        print(f'GALE {galeCount}')
+        if galeCount >= maxGales:
+            isGaleActive = False
+            isRed = True
+        return
 
-time.sleep(1000)
+    elif resultsList[0] == 'T' and resultsList[0] == currentBet and isRed:
+        print('RED')
+        resetState()
+        return
+
+def resetState():
+    """
+    Resets the state variables after each bet resolution.
+    """
+    global isEntryAllowed, isGreen, isGaleActive, isRed, galeCount
+    isEntryAllowed = True
+    isGreen = False
+    isGaleActive = False
+    isRed = False
+    galeCount = 0
+
+def fetchResults():
+    """
+    Navigates through nested iframes to extract the latest game results.
+    """
+    # Switch to the main window
+    driver.switch_to.window(mainWindow)
+
+    # Wait and switch to the first iframe
+    while not driver.find_elements(By.XPATH, '/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]/div/iframe'):
+        time.sleep(2)
+    iframe1 = driver.find_element(By.XPATH, '/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]/div/iframe')
+    driver.switch_to.frame(iframe1)
+
+    # Wait and switch to the second iframe
+    while not driver.find_elements(By.XPATH, '/html/body/iframe'):
+        time.sleep(2)
+    iframe2 = driver.find_element(By.XPATH, '/html/body/iframe')
+    driver.switch_to.frame(iframe2)
+
+    # Wait and switch to the third iframe
+    while not driver.find_elements(By.XPATH, '/html/body/div[5]/div[2]/iframe'):
+        time.sleep(2)
+    iframe3 = driver.find_element(By.XPATH, '/html/body/div[5]/div[2]/iframe')
+    driver.switch_to.frame(iframe3)
+
+    # Wait for the target element and extract results
+    while not driver.find_elements(By.XPATH, '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div'):
+        time.sleep(2)
+    resultElement = driver.find_element(By.XPATH, '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div')
+    return resultElement.text.split()[::-1][:10]
+
+# Main loop to continuously check and display new results
+while True:
+    resultsList = fetchResults()
+    if resultsList != prevResults:
+        prevResults = resultsList
+        print(resultsList)
+        executeStrategy(resultsList)
