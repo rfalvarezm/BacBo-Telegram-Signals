@@ -92,10 +92,10 @@ driver = webdriver.Chrome(executable_path='/path/to/chromedriver')
 ### Run the Script
 
 ```bash
-python your_script_name.py
+python main.py
 ```
 
-Replace `your_script_name.py` with the actual name of your Python script.
+Replace `main.py` with the actual name of your Python script.
 
 ### Monitoring
 
