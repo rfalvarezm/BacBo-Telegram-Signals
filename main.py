@@ -2,10 +2,12 @@ import os
 import asyncio
 import logging
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
+from webdriver_manager.chrome import ChromeDriverManager
 from dotenv import load_dotenv
 from telegram import Bot
 from telegram.error import TelegramError
@@ -23,9 +25,11 @@ TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHANNEL_ID = os.getenv('TELEGRAM_CHANNEL_ID')
 WIN_STICKER_ID = os.getenv('WIN_STICKER_ID')  # Sticker file ID from .env
 LOSS_STICKER_ID = os.getenv('LOSS_STICKER_ID')  # Loss sticker file ID from .env
+LOGIN_USERNAME = os.getenv('LOGIN_USERNAME')
+LOGIN_PASSWORD = os.getenv('LOGIN_PASSWORD')
 
-if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
-    raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHANNEL_ID must be set in the .env file.")
+if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID or not LOGIN_USERNAME or not LOGIN_PASSWORD:
+    raise ValueError("TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, LOGIN_USERNAME, and LOGIN_PASSWORD must be set in the .env file.")
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
@@ -317,11 +321,32 @@ async def async_fetch_results(executor, driver, main_window):
 
 async def main():
     # Initialize WebDriver
-    driver = webdriver.Chrome()
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    driver.implicitly_wait(10)
 
     try:
         # Open the target webpage
         driver.get('https://www.bettilt504.com/pt/game/bac-bo/real')
+        
+        # Wait for the login modal and input username and password if modal is present
+        try:
+            login_modal = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'modal-content')))
+            username_field = login_modal.find_element(By.XPATH, '//input[@type="text" or @name="username"]')
+            password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
+            
+            username_field.send_keys(LOGIN_USERNAME)
+            password_field.send_keys(LOGIN_PASSWORD)
+            
+            # Click the login button
+            login_button = login_modal.find_element(By.XPATH, '//button[contains(@class, "styles__Button") and @type="submit"]')
+            login_button.click()
+            
+            # Wait for the modal to disappear, indicating a successful login
+            WebDriverWait(driver, 30).until(EC.invisibility_of_element((By.CLASS_NAME, 'modal-dialog')))
+            logging.info("✅ Successfully logged in.")
+        except TimeoutException:
+            logging.info("🔑 Login modal not found. Proceeding without login.")
+        
         main_window = driver.window_handles[0]
 
         # Define the strategies
@@ -376,7 +401,8 @@ async def main():
         message = f"❌ An unexpected error occurred: {e}"
         logging.error(message)
     finally:
-        driver.quit()
+        if not isinstance(e, KeyboardInterrupt):
+            driver.quit()
         message = "🔒 WebDriver has been closed."
         logging.info(message)
 
