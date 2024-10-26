@@ -49,7 +49,7 @@ BET_MESSAGES = {
     'B': "🚨 ENTRY CONFIRMED\n🎲 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})"
 }
 
-GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}: Increasing bet on color ({color})"
+GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}"
 
 TIE_COLOR = BET_COLORS['T']
 
@@ -92,10 +92,6 @@ class Scoreboard:
         self.consecutive_wins += 1
         self.total_attempts += 1
 
-    def record_tie(self):
-        self.ties += 1
-        self.total_attempts += 1
-
     def record_loss(self):
         self.losses += 1
         self.total_attempts += 1
@@ -133,21 +129,17 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False):
         if is_win and WIN_STICKER_ID:
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
             logging.info("🏆 Win sticker sent.")
-            print("🏆 Win sticker sent.")
         # Send loss sticker if it's a loss and LOSS_STICKER_ID is set
         elif is_loss and LOSS_STICKER_ID:
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
             logging.info("🔴 Loss sticker sent.")
-            print("🔴 Loss sticker sent.")
         # Send the message only if it's not a win/loss or no sticker ID is available
         elif message:
             await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
             logging.info(f"✅ Message sent: {message}")
-            print(f"✅ Message sent: {message}")
     except TelegramError as e:
         # Log the error but do not send it to Telegram
         logging.error(f"❌ Failed to send message: {e}")
-        print(f"❌ Failed to send message: {e}")
 
 # =========================
 # Betting Strategy Class
@@ -205,9 +197,8 @@ class BettingStrategy:
             return
 
         if results_list[0] == 'T' and self.is_green:
-            scoreboard.record_tie()  # Count separately as a tie
-            print("🟡 TIE!")
-            await send_telegram_message("🟡 TIE!")  # Message for tie, no sticker
+            scoreboard.record_win()
+            await send_telegram_message(is_win=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
             return
@@ -215,7 +206,6 @@ class BettingStrategy:
         if results_list[0] != self.current_bet and self.is_green and self.is_gale_active:
             self.gale_count += 1
             message = get_gale_message(self.gale_count, self.current_bet)  # Custom Gale message
-            print(message)
             await send_telegram_message(message)
             if self.gale_count >= self.max_gales:
                 self.is_gale_active = False
@@ -225,7 +215,6 @@ class BettingStrategy:
         if self.is_red:
             message = '🚫 LOSS - Gale limit reached.'
             scoreboard.record_loss()
-            print(message)
             await send_telegram_message(message)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
@@ -243,7 +232,6 @@ class BettingStrategy:
         self.current_bet = None
         self.gale_count = 0
         logging.info("🔄 State has been reset.")
-        print("🔄 State has been reset.")
 
 # =========================
 # Selenium Fetch Results
@@ -280,7 +268,6 @@ def sync_fetch_results(driver, main_window):
                     time.sleep(1)
             else:
                 message = f"Iframe not found: {path}"
-                print(message)
                 return {"error": message}
 
         # Wait for the result element to be present
@@ -293,20 +280,17 @@ def sync_fetch_results(driver, main_window):
                 time.sleep(1)
         else:
             message = "Result element not found."
-            print(message)
             return {"error": message}
 
         # Extract and process the results
         results_text = result_element.text
         results = results_text.split()[::-1][:10]
         message = f"🔍 Fetched Results: {results}"
-        print(message)
         logging.info(message)
         return {"results": results}
 
     except Exception as e:
         message = f"❌ Error fetching results: {e}"
-        print(message)
         logging.error(message)
         return {"error": message}
 
@@ -358,7 +342,6 @@ async def main():
             result = await async_fetch_results(executor, driver, main_window)
 
             if "error" in result:
-                print("Error obtained while fetching results. Retrying...")
                 # Do not send error messages to Telegram
                 logging.error(f"⚠️ {result['error']} Retrying...")
                 await asyncio.sleep(5)
@@ -367,7 +350,6 @@ async def main():
             results_list = result.get("results", [])
 
             if not results_list:
-                print("No results obtained. Retrying...")
                 logging.warning("⚠️ No results obtained. Retrying...")
                 await asyncio.sleep(5)
                 continue
@@ -377,7 +359,6 @@ async def main():
                 prev_results = results_list
                 await betting_strategy.execute_strategy(results_list)
             else:
-                print("🔄 No new results. Waiting for updates...")
                 logging.info("🔄 No new results. Waiting for updates...")
 
             # Wait for a while before checking again
@@ -385,11 +366,9 @@ async def main():
 
     except KeyboardInterrupt:
         message = "⏹ Program interrupted by user."
-        print(message)
         logging.info(message)
     except Exception as e:
         message = f"❌ An unexpected error occurred: {e}"
-        print(message)
         logging.error(message)
     finally:
         driver.quit()
