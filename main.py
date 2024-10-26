@@ -3,6 +3,7 @@ import asyncio
 import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -320,8 +321,15 @@ async def async_fetch_results(executor, driver, main_window):
 # =========================
 
 async def main():
+    # Set Chrome options for headless mode
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')  # Run in headless mode
+    chrome_options.add_argument('--no-sandbox')  # Bypass OS security model, useful for Docker
+    chrome_options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems in containerized environments
+    chrome_options.add_argument('--disable-gpu')  # Disable GPU (optional but recommended for better compatibility)
+    
     # Initialize WebDriver
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     driver.implicitly_wait(10)
 
     try:
