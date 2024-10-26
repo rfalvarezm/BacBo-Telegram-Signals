@@ -175,7 +175,6 @@ class BettingStrategy:
                 bet = strategy['bet']
                 if results_list[:len(pattern)] == pattern:
                     message = get_bet_message(bet)  # Use the custom message
-                    print(message)
                     await send_telegram_message(message)
                     self.is_entry_allowed = False
                     self.is_green = True
@@ -190,7 +189,6 @@ class BettingStrategy:
 
         if results_list[0] == self.current_bet and self.is_green:
             scoreboard.record_win()
-            print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
