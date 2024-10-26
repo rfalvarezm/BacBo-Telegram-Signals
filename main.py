@@ -82,7 +82,6 @@ def get_gale_message(gale_count, bet_type):
 class Scoreboard:
     def __init__(self):
         self.wins = 0
-        self.ties = 0
         self.losses = 0
         self.consecutive_wins = 0
         self.total_attempts = 0
@@ -105,7 +104,7 @@ class Scoreboard:
     def generate_scoreboard_message(self):
         return (
             f"📃 SCOREBOARD\n"
-            f"🟢 Wins: {self.wins} 🟡 Ties: {self.ties} 🔴 Losses: {self.losses}\n"
+            f"🟢 Wins: {self.wins} 🔴 Losses: {self.losses}\n"
             f"📊 Consecutive Wins: {self.consecutive_wins}\n"
             f"🎯 Assertivity Rate: {self.calculate_assertivity_rate()}%"
         )
@@ -174,7 +173,9 @@ class BettingStrategy:
                 pattern = strategy['pattern']
                 bet = strategy['bet']
                 if results_list[:len(pattern)] == pattern:
+                    
                     message = get_bet_message(bet)  # Use the custom message
+                    print(message)
                     await send_telegram_message(message)
                     self.is_entry_allowed = False
                     self.is_green = True
@@ -189,6 +190,7 @@ class BettingStrategy:
 
         if results_list[0] == self.current_bet and self.is_green:
             scoreboard.record_win()
+            print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
@@ -196,6 +198,7 @@ class BettingStrategy:
 
         if results_list[0] == 'T' and self.is_green:
             scoreboard.record_win()
+            print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
@@ -211,9 +214,9 @@ class BettingStrategy:
             return
 
         if self.is_red:
-            message = '🚫 LOSS - Gale limit reached.'
             scoreboard.record_loss()
-            await send_telegram_message(message)
+            print("🔴 LOSS!")
+            await send_telegram_message(is_loss=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
             return
@@ -284,6 +287,7 @@ def sync_fetch_results(driver, main_window):
         results_text = result_element.text
         results = results_text.split()[::-1][:10]
         message = f"🔍 Fetched Results: {results}"
+        print(message)
         logging.info(message)
         return {"results": results}
 
