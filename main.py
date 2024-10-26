@@ -2,12 +2,15 @@ import os
 import asyncio
 import logging
 from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from dotenv import load_dotenv
 from telegram import Bot
 from telegram.error import TelegramError
 from concurrent.futures import ThreadPoolExecutor
+import traceback
 
 # =========================
 # Configuration and Setup
@@ -259,42 +262,42 @@ def sync_fetch_results(driver, main_window):
 
         # Navigate through the iframes
         for path in iframe_paths:
-            # Wait until the iframe is present
-            for _ in range(10):
-                try:
-                    iframe = driver.find_element(By.XPATH, path)
-                    driver.switch_to.frame(iframe)
-                    break
-                except NoSuchElementException:
-                    time.sleep(1)
-            else:
+            try:
+                # Wait until the iframe is present and switch to it
+                iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, path)))
+                driver.switch_to.frame(iframe)
+            except TimeoutException:
                 message = f"Iframe not found: {path}"
-                return {"error": message}
+                logging.warning(message)
+                continue
 
         # Wait for the result element to be present
         target_xpath = '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div'
-        for _ in range(10):
-            try:
-                result_element = driver.find_element(By.XPATH, target_xpath)
-                break
-            except NoSuchElementException:
-                time.sleep(1)
-        else:
-            message = "Result element not found."
-            return {"error": message}
+        result_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, target_xpath)))
 
         # Extract and process the results
         results_text = result_element.text
-        results = results_text.split()[::-1][:10]
+        results = results_text.split()[::-1][:3][::-1]
         message = f"🔍 Fetched Results: {results}"
         print(message)
         logging.info(message)
         return {"results": results}
 
-    except Exception as e:
-        message = f"❌ Error fetching results: {e}"
+    except NoSuchElementException as e:
+        message = f"❌ Element not found: {e}\n{traceback.format_exc()}"
         logging.error(message)
         return {"error": message}
+    except TimeoutException as e:
+        message = f"❌ Timeout while waiting for an element: {e}\n{traceback.format_exc()}"
+        logging.error(message)
+        return {"error": message}
+    except Exception as e:
+        message = f"❌ General error occurred: {e}\n{traceback.format_exc()}"
+        logging.error(message)
+        return {"error": message}
+    finally:
+        # Always switch back to the main window to avoid issues with further interactions
+        driver.switch_to.default_content()
 
 async def async_fetch_results(executor, driver, main_window):
     """
