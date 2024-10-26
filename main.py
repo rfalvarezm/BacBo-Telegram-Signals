@@ -48,8 +48,8 @@ BET_COLORS = {
 }
 
 BET_MESSAGES = {
-    'P': "🚨 ENTRY CONFIRMED\n🎲 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})",
-    'B': "🚨 ENTRY CONFIRMED\n🎲 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})"
+    'P': "🚨 ENTRY CONFIRMED\n🌹 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})",
+    'B': "🚨 ENTRY CONFIRMED\n🌹 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})"
 }
 
 GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}"
@@ -106,9 +106,9 @@ class Scoreboard:
 
     def generate_scoreboard_message(self):
         return (
-            f"📃 SCOREBOARD\n"
+            f"📜 SCOREBOARD\n"
             f"🟢 Wins: {self.wins} 🔴 Losses: {self.losses}\n"
-            f"📊 Consecutive Wins: {self.consecutive_wins}\n"
+            f"🌄 Consecutive Wins: {self.consecutive_wins}\n"
             f"🎯 Assertivity Rate: {self.calculate_assertivity_rate()}%"
         )
 
@@ -175,8 +175,8 @@ class BettingStrategy:
             for strategy in self.strategies:
                 pattern = strategy['pattern']
                 bet = strategy['bet']
-                if results_list[:len(pattern)] == pattern:
-                    
+                if results_list[-len(pattern):] == pattern:
+                    # If the last entries in results_list match the pattern
                     message = get_bet_message(bet)  # Use the custom message
                     print(message)
                     await send_telegram_message(message)
@@ -191,7 +191,7 @@ class BettingStrategy:
         if not self.current_strategy:
             return
 
-        if results_list[0] == self.current_bet and self.is_green:
+        if results_list[-1] == self.current_bet and self.is_green:
             scoreboard.record_win()
             print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
@@ -199,7 +199,7 @@ class BettingStrategy:
             await self.reset_state()
             return
 
-        if results_list[0] == 'T' and self.is_green:
+        if results_list[-1] == 'T' and self.is_green:
             scoreboard.record_win()
             print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
@@ -207,7 +207,7 @@ class BettingStrategy:
             await self.reset_state()
             return
 
-        if results_list[0] != self.current_bet and self.is_green and self.is_gale_active:
+        if results_list[-1] != self.current_bet and self.is_green and self.is_gale_active:
             self.gale_count += 1
             message = get_gale_message(self.gale_count, self.current_bet)  # Custom Gale message
             await send_telegram_message(message)
