@@ -1,7 +1,7 @@
 import os
 import asyncio
 import logging
-from selenium import webdriver 
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHANNEL_ID = os.getenv('TELEGRAM_CHANNEL_ID')
+WIN_STICKER_ID = os.getenv('WIN_STICKER_ID')  # Sticker file ID from .env
+LOSS_STICKER_ID = os.getenv('LOSS_STICKER_ID')  # Loss sticker file ID from .env
 
 if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID:
     raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHANNEL_ID must be set in the .env file.")
@@ -32,19 +34,116 @@ logging.basicConfig(
 )
 
 # =========================
+# Bet Messages and Colors
+# =========================
+
+# Define colors and messages for each bet type
+BET_COLORS = {
+    'P': '🔵',  # Blue
+    'B': '🔴',  # Red
+    'T': '🟡'   # Yellow (for tie protection)
+}
+
+BET_MESSAGES = {
+    'P': "🚨 ENTRY CONFIRMED\n🎲 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})",
+    'B': "🚨 ENTRY CONFIRMED\n🎲 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})"
+}
+
+GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}: Increasing bet on color ({color})"
+
+TIE_COLOR = BET_COLORS['T']
+
+def get_bet_message(bet_type):
+    """
+    Generates a message for the specified bet type (P, B, or T).
+    
+    :param bet_type: The type of bet ('P' or 'B')
+    :return: Customized message string
+    """
+    color = BET_COLORS.get(bet_type, '❓')  # Default to '❓' if type is not recognized
+    message_template = BET_MESSAGES.get(bet_type, "Bet type not recognized.")
+    return message_template.format(color=color, tie_color=TIE_COLOR)
+
+def get_gale_message(gale_count, bet_type):
+    """
+    Generates a message for a Gale attempt.
+    
+    :param gale_count: The current Gale attempt number
+    :param bet_type: The type of bet ('P' or 'B')
+    :return: Customized Gale message string
+    """
+    color = BET_COLORS.get(bet_type, '❓')
+    return GALE_MESSAGE.format(attempt=gale_count, color=color)
+
+# =========================
+# Scoreboard Tracking
+# =========================
+
+class Scoreboard:
+    def __init__(self):
+        self.wins = 0
+        self.ties = 0
+        self.losses = 0
+        self.consecutive_wins = 0
+        self.total_attempts = 0
+
+    def record_win(self):
+        self.wins += 1
+        self.consecutive_wins += 1
+        self.total_attempts += 1
+
+    def record_tie(self):
+        self.ties += 1
+        self.total_attempts += 1
+
+    def record_loss(self):
+        self.losses += 1
+        self.total_attempts += 1
+        self.consecutive_wins = 0
+
+    def calculate_assertivity_rate(self):
+        if self.total_attempts == 0:
+            return 0.0
+        return round((self.wins / self.total_attempts) * 100, 2)
+
+    def generate_scoreboard_message(self):
+        return (
+            f"📃 SCOREBOARD\n"
+            f"🟢 Wins: {self.wins} 🟡 Ties: {self.ties} 🔴 Losses: {self.losses}\n"
+            f"📊 Consecutive Wins: {self.consecutive_wins}\n"
+            f"🎯 Assertivity Rate: {self.calculate_assertivity_rate()}%"
+        )
+
+scoreboard = Scoreboard()
+
+# =========================
 # Telegram Messaging
 # =========================
 
-async def send_telegram_message(message):
+async def send_telegram_message(message=None, is_win=False, is_loss=False):
     """
-    Sends a message to the specified Telegram channel asynchronously.
-
-    :param message: The message to send.
+    Sends a message to the specified Telegram channel asynchronously. Sends a sticker if it's a win or loss.
+    
+    :param message: The message to send (optional).
+    :param is_win: Boolean indicating if the message is a win event.
+    :param is_loss: Boolean indicating if the message is a loss event.
     """
     try:
-        await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
-        logging.info(f"✅ Message sent: {message}")
-        print(f"✅ Message sent: {message}")
+        # Send win sticker if it's a win and WIN_STICKER_ID is set
+        if is_win and WIN_STICKER_ID:
+            await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
+            logging.info("🏆 Win sticker sent.")
+            print("🏆 Win sticker sent.")
+        # Send loss sticker if it's a loss and LOSS_STICKER_ID is set
+        elif is_loss and LOSS_STICKER_ID:
+            await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
+            logging.info("🔴 Loss sticker sent.")
+            print("🔴 Loss sticker sent.")
+        # Send the message only if it's not a win/loss or no sticker ID is available
+        elif message:
+            await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
+            logging.info(f"✅ Message sent: {message}")
+            print(f"✅ Message sent: {message}")
     except TelegramError as e:
         # Log the error but do not send it to Telegram
         logging.error(f"❌ Failed to send message: {e}")
@@ -83,7 +182,7 @@ class BettingStrategy:
                 pattern = strategy['pattern']
                 bet = strategy['bet']
                 if results_list[:len(pattern)] == pattern:
-                    message = f'📈 Entry on {bet}'
+                    message = get_bet_message(bet)  # Use the custom message
                     print(message)
                     await send_telegram_message(message)
                     self.is_entry_allowed = False
@@ -98,22 +197,24 @@ class BettingStrategy:
             return
 
         if results_list[0] == self.current_bet and self.is_green:
-            message = '✅ GREEN - Win!'
-            print(message)
-            await send_telegram_message(message)
+            scoreboard.record_win()
+            print("✅ WIN!")
+            await send_telegram_message(is_win=True)  # Send only the win sticker
+            await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
             return
 
         if results_list[0] == 'T' and self.is_green:
-            message = '🔄 GREEN - TIE!'
-            print(message)
-            await send_telegram_message(message)
+            scoreboard.record_tie()  # Count separately as a tie
+            print("🟡 TIE!")
+            await send_telegram_message("🟡 TIE!")  # Message for tie, no sticker
+            await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
             return
 
         if results_list[0] != self.current_bet and self.is_green and self.is_gale_active:
             self.gale_count += 1
-            message = f'📉 GALE {self.gale_count}'
+            message = get_gale_message(self.gale_count, self.current_bet)  # Custom Gale message
             print(message)
             await send_telegram_message(message)
             if self.gale_count >= self.max_gales:
@@ -122,9 +223,11 @@ class BettingStrategy:
             return
 
         if self.is_red:
-            message = '🚫 RED - Gale limit reached.'
+            message = '🚫 LOSS - Gale limit reached.'
+            scoreboard.record_loss()
             print(message)
             await send_telegram_message(message)
+            await send_telegram_message(scoreboard.generate_scoreboard_message())
             await self.reset_state()
             return
 
