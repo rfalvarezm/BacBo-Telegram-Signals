@@ -291,8 +291,7 @@ async def main():
     finally:
         driver.quit()
         message = "🔒 WebDriver has been closed."
-        print(message)
-        await send_telegram_message(message)
+        logging.info(message)
 
 # =========================
 # Entry Point
