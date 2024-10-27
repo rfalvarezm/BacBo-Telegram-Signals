@@ -59,6 +59,8 @@ BET_MESSAGES = {
 
 GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}"
 
+PREPARE_MESSAGE = "🛠️ PREPARE FOR POTENTIAL ENTRY"
+
 TIE_COLOR = BET_COLORS['T']
 
 def get_bet_message(bet_type):
@@ -169,6 +171,8 @@ class BettingStrategy:
         self.current_strategy = None
         self.current_bet = None
         self.gale_count = 0
+        self.prepare_message_sent = False
+        self.wait_after_gale = False
 
     async def execute_strategy(self, results_list):
         """
@@ -176,12 +180,23 @@ class BettingStrategy:
 
         :param results_list: List of the latest results.
         """
+        if self.wait_after_gale:
+            # Wait one more play after a gale win or loss before starting again
+            self.wait_after_gale = False
+            logging.info("🔄 Waiting one more play after gale outcome.")
+            return
+
         if self.is_entry_allowed:
             for strategy in self.strategies:
                 pattern = strategy['pattern']
                 bet = strategy['bet']
-                if results_list[-len(pattern):] == pattern:
-                    # If the last entries in results_list match the pattern
+                if results_list[-(len(pattern) - 1):] == pattern[:len(pattern) - 1] and not self.prepare_message_sent:
+                    # If the last two entries in results_list match the first two entries of the pattern
+                    prepare_message = PREPARE_MESSAGE
+                    await send_telegram_message(prepare_message)
+                    self.prepare_message_sent = True
+                if results_list[-len(pattern):] == pattern and self.prepare_message_sent:
+                    # If the last entries in results_list match the pattern and prepare message was sent
                     message = get_bet_message(bet)  # Use the custom message
                     print(message)
                     await send_telegram_message(message)
@@ -190,6 +205,7 @@ class BettingStrategy:
                     self.is_gale_active = True
                     self.current_strategy = strategy
                     self.current_bet = bet
+                    self.prepare_message_sent = False  # Reset the prepare message flag
                     break
             return
 
@@ -201,7 +217,7 @@ class BettingStrategy:
             print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
             await send_telegram_message(scoreboard.generate_scoreboard_message())
-            await self.reset_state()
+            await self.reset_state(wait_after_gale=True)
             return
 
         if results_list[-1] == 'T' and self.is_green:
@@ -209,7 +225,7 @@ class BettingStrategy:
             print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
-            await self.reset_state()
+            await self.reset_state(wait_after_gale=True)
             return
 
         if results_list[-1] != self.current_bet and self.is_green and self.is_gale_active:
@@ -226,12 +242,14 @@ class BettingStrategy:
             print("🔴 LOSS!")
             await send_telegram_message(is_loss=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
-            await self.reset_state()
+            await self.reset_state(wait_after_gale=True)
             return
 
-    async def reset_state(self):
+    async def reset_state(self, wait_after_gale=False):
         """
         Resets the state variables after each bet resolution.
+        
+        :param wait_after_gale: Boolean indicating if we should wait one more play after a gale outcome.
         """
         self.is_entry_allowed = True
         self.is_green = False
@@ -240,6 +258,8 @@ class BettingStrategy:
         self.current_strategy = None
         self.current_bet = None
         self.gale_count = 0
+        self.prepare_message_sent = False
+        self.wait_after_gale = wait_after_gale
         logging.info("🔄 State has been reset.")
 
 # =========================
@@ -418,8 +438,7 @@ async def main():
         message = f"❌ An unexpected error occurred: {e}"
         logging.error(message)
     finally:
-        if not isinstance(e, KeyboardInterrupt):
-            driver.quit()
+        driver.quit()
         message = "🔒 WebDriver has been closed."
         logging.info(message)
 
