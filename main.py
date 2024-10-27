@@ -15,6 +15,7 @@ from telegram.error import TelegramError
 from concurrent.futures import ThreadPoolExecutor
 import traceback
 import random
+
 # =========================
 # Configuration and Setup
 # =========================
@@ -144,8 +145,9 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False):
             logging.info("🔴 Loss sticker sent.")
         # Send the message only if it's not a win/loss or no sticker ID is available
         elif message:
-            await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
+            sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
             logging.info(f"✅ Message sent: {message}")
+            return sent_message.message_id  # Return the message ID
     except TelegramError as e:
         # Log the error but do not send it to Telegram
         logging.error(f"❌ Failed to send message: {e}")
@@ -172,6 +174,7 @@ class BettingStrategy:
         self.current_bet = None
         self.gale_count = 0
         self.prepare_message_sent = False
+        self.prepare_message_id = None  # Store message ID for the prepare message
         self.wait_after_gale = False
 
     async def execute_strategy(self, results_list):
@@ -193,10 +196,17 @@ class BettingStrategy:
                 if results_list[-(len(pattern) - 1):] == pattern[:len(pattern) - 1] and not self.prepare_message_sent:
                     # If the last two entries in results_list match the first two entries of the pattern
                     prepare_message = PREPARE_MESSAGE
-                    await send_telegram_message(prepare_message)
+                    self.prepare_message_id = await send_telegram_message(prepare_message)  # Store the message ID
                     self.prepare_message_sent = True
                 if results_list[-len(pattern):] == pattern and self.prepare_message_sent:
                     # If the last entries in results_list match the pattern and prepare message was sent
+                    if self.prepare_message_id:
+                        try:
+                            await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
+                            logging.info("🗑️ Deleted prepare message.")
+                        except TelegramError as e:
+                            logging.error(f"❌ Failed to delete prepare message: {e}")
+
                     message = get_bet_message(bet)  # Use the custom message
                     print(message)
                     await send_telegram_message(message)
@@ -206,6 +216,7 @@ class BettingStrategy:
                     self.current_strategy = strategy
                     self.current_bet = bet
                     self.prepare_message_sent = False  # Reset the prepare message flag
+                    self.prepare_message_id = None  # Reset the message ID
                     break
             return
 
@@ -259,6 +270,7 @@ class BettingStrategy:
         self.current_bet = None
         self.gale_count = 0
         self.prepare_message_sent = False
+        self.prepare_message_id = None
         self.wait_after_gale = wait_after_gale
         logging.info("🔄 State has been reset.")
 
