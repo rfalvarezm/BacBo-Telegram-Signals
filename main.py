@@ -14,7 +14,7 @@ from telegram import Bot
 from telegram.error import TelegramError
 from concurrent.futures import ThreadPoolExecutor
 import traceback
-
+import random
 # =========================
 # Configuration and Setup
 # =========================
@@ -271,6 +271,13 @@ def sync_fetch_results(driver, main_window):
                 # Wait until the iframe is present and switch to it
                 iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, path)))
                 driver.switch_to.frame(iframe)
+
+                # Perform a click inside the iframe to bypass AFK detector
+                body_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                webdriver.ActionChains(driver).move_to_element_with_offset(
+                    body_element, random.randint(1, 10), random.randint(1, 10)
+                ).click().perform()
+                logging.info("🖱️ Click performed inside iframe to bypass AFK detector.")
             except TimeoutException:
                 message = f"Iframe not found: {path}"
                 logging.warning(message)
@@ -303,6 +310,7 @@ def sync_fetch_results(driver, main_window):
     finally:
         # Always switch back to the main window to avoid issues with further interactions
         driver.switch_to.default_content()
+
 
 async def async_fetch_results(executor, driver, main_window):
     """
