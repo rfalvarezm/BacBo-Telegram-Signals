@@ -335,6 +335,7 @@ async def main():
     chrome_options.add_argument('--no-sandbox')  # Bypass OS security model, useful for Docker
     chrome_options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems in containerized environments
     chrome_options.add_argument('--disable-gpu')  # Disable GPU (optional but recommended for better compatibility)
+    chrome_options.add_argument("--mute-audio")
     
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
