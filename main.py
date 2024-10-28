@@ -449,12 +449,19 @@ async def main():
 
         # Initialize the betting strategy
         betting_strategy = BettingStrategy(strategies=strategies, max_gales=MAX_GALES)
+        
+        # Send "bot started" message
+        await send_telegram_message("🚀 Bot started and ready to monitor results.")
 
         # Variable to store previous results
         prev_results = []
-
+        
         # Set up a ThreadPoolExecutor for blocking operations
         executor = ThreadPoolExecutor(max_workers=1)
+
+        # Set a flag to allow pattern checking only after a specific number of results
+        betting_strategy.can_check_patterns = False
+        initial_results_required = 3  # Set the number of results required to start checking patterns
 
         # Main loop to monitor and execute bets
         while True:
@@ -477,7 +484,16 @@ async def main():
             # Check if the newly fetched results are different from the previous ones
             if results_list != prev_results:
                 prev_results = results_list
-                await betting_strategy.execute_strategy(results_list)
+
+                # Enable pattern checking after gathering enough initial results
+                if len(prev_results) >= initial_results_required:
+                    betting_strategy.can_check_patterns = True
+
+                # Execute betting strategy if the guard condition is met
+                if betting_strategy.can_check_patterns:
+                    await betting_strategy.execute_strategy(results_list)
+                else:
+                    logging.info("⏳ Gathering initial results before starting pattern matching...")
             else:
                 logging.info("🔄 No new results. Waiting for updates...")
 
