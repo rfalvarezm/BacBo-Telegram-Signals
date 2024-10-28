@@ -175,6 +175,7 @@ class BettingStrategy:
         self.gale_count = 0
         self.prepare_message_sent = False
         self.prepare_message_id = None  # Store message ID for the prepare message
+        self.gale_message_ids = []  # Store message IDs for gale messages
         self.wait_after_gale = False
 
     async def execute_strategy(self, results_list):
@@ -237,6 +238,7 @@ class BettingStrategy:
             print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
             await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
 
@@ -245,13 +247,16 @@ class BettingStrategy:
             print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
 
         if results_list[-1] != self.current_bet and self.is_green and self.is_gale_active:
             self.gale_count += 1
             message = get_gale_message(self.gale_count, self.current_bet)  # Custom Gale message
-            await send_telegram_message(message)
+            gale_message_id = await send_telegram_message(message)
+            if gale_message_id:
+                self.gale_message_ids.append(gale_message_id)  # Store gale message ID
             if self.gale_count >= self.max_gales:
                 self.is_gale_active = False
                 self.is_red = True
@@ -262,8 +267,21 @@ class BettingStrategy:
             print("🔴 LOSS!")
             await send_telegram_message(is_loss=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
+
+    async def delete_gale_messages(self):
+        """
+        Deletes all gale messages stored in gale_message_ids.
+        """
+        for message_id in self.gale_message_ids:
+            try:
+                await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=message_id)
+                logging.info(f"🗑️ Deleted gale message with ID: {message_id}")
+            except TelegramError as e:
+                logging.error(f"❌ Failed to delete gale message with ID {message_id}: {e}")
+        self.gale_message_ids.clear()
 
     async def reset_state(self, wait_after_gale=False):
         """
@@ -280,6 +298,7 @@ class BettingStrategy:
         self.gale_count = 0
         self.prepare_message_sent = False
         self.prepare_message_id = None
+        self.gale_message_ids.clear()
         self.wait_after_gale = wait_after_gale
         logging.info("🔄 State has been reset.")
 
