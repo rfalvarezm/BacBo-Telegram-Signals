@@ -64,6 +64,9 @@ PREPARE_MESSAGE = "🛠️ PREPARE FOR POTENTIAL ENTRY"
 
 TIE_COLOR = BET_COLORS['T']
 
+# Number of gales to attempt
+MAX_GALES = 2
+
 def get_bet_message(bet_type):
     """
     Generates a message for the specified bet type (P, B, or T).
@@ -157,7 +160,7 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False):
 # =========================
 
 class BettingStrategy:
-    def __init__(self, strategies, max_gales=2):
+    def __init__(self, strategies, max_gales=MAX_GALES):
         """
         Initializes the betting strategy.
 
@@ -435,7 +438,7 @@ async def main():
         ]
 
         # Initialize the betting strategy
-        betting_strategy = BettingStrategy(strategies=strategies, max_gales=2)
+        betting_strategy = BettingStrategy(strategies=strategies, max_gales=MAX_GALES)
 
         # Variable to store previous results
         prev_results = []
