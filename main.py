@@ -221,6 +221,15 @@ class BettingStrategy:
             return
 
         if not self.current_strategy:
+            # If the prepare message was sent but no match occurred, delete the prepare message and reset flags
+            if self.prepare_message_sent and self.prepare_message_id:
+                try:
+                    await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
+                    logging.info("🗑️ Deleted prepare message after no match.")
+                except TelegramError as e:
+                    logging.error(f"❌ Failed to delete prepare message: {e}")
+                self.prepare_message_sent = False
+                self.prepare_message_id = None
             return
 
         if results_list[-1] == self.current_bet and self.is_green:
