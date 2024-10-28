@@ -46,6 +46,10 @@ logging.basicConfig(
 # Bet Messages and Colors
 # =========================
 
+# Link messages for registration
+LINK_MESSAGE_ENTRY_BUTTON = ('Register here', 'https://example.com/register')
+LINK_MESSAGE_SCOREBOARD_BUTTON = ('Enter website', 'https://example.com/website')
+
 # Define colors and messages for each bet type
 BET_COLORS = {
     'P': '🔵',  # Blue
@@ -129,7 +133,9 @@ scoreboard = Scoreboard()
 # Telegram Messaging
 # =========================
 
-async def send_telegram_message(message=None, is_win=False, is_loss=False):
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+async def send_telegram_message(message=None, is_win=False, is_loss=False, buttons=None):
     """
     Sends a message to the specified Telegram channel asynchronously. Sends a sticker if it's a win or loss.
     
@@ -148,7 +154,11 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False):
             logging.info("🔴 Loss sticker sent.")
         # Send the message only if it's not a win/loss or no sticker ID is available
         elif message:
-            sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
+            if buttons:
+                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(text, url=url) for text, url in buttons]])
+                sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message, reply_markup=reply_markup)
+            else:
+                sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
             logging.info(f"✅ Message sent: {message}")
             return sent_message.message_id  # Return the message ID
     except TelegramError as e:
@@ -213,7 +223,7 @@ class BettingStrategy:
 
                     message = get_bet_message(bet)  # Use the custom message
                     print(message)
-                    await send_telegram_message(message)
+                    await send_telegram_message(message, buttons=[LINK_MESSAGE_ENTRY_BUTTON])
                     self.is_entry_allowed = False
                     self.is_green = True
                     self.is_gale_active = True
@@ -240,7 +250,7 @@ class BettingStrategy:
             scoreboard.record_win()
             print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
-            await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
@@ -249,7 +259,7 @@ class BettingStrategy:
             scoreboard.record_win()
             print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
-            await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
@@ -269,7 +279,7 @@ class BettingStrategy:
             scoreboard.record_loss()
             print("🔴 LOSS!")
             await send_telegram_message(is_loss=True)
-            await send_telegram_message(scoreboard.generate_scoreboard_message())
+            await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
             await self.reset_state(wait_after_gale=True)
             return
@@ -491,3 +501,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
