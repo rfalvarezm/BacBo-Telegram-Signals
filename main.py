@@ -320,7 +320,7 @@ async def schedule_restart():
     # Schedule a daily restart at a specific time
     while True:
         now = datetime.datetime.now()
-        target_time = now.replace(hour=19, minute=54, second=0, microsecond=0)
+        target_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
         if now >= target_time:
             target_time += datetime.timedelta(days=1)
 

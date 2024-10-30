@@ -1,177 +1,124 @@
-# BacBo-Signals
+# BacBo Telegram Betting Bot
 
-Automate your betting strategies with Selenium and Telegram notifications. This Python app lets you set predefined betting strategies and sends real-time signals to your Telegram channel, without aiming to predict or win money.
-
-## Table of Contents
-
--   [Features](#features)
--   [Prerequisites](#prerequisites)
--   [Installation](#installation)
--   [Configuration](#configuration)
--   [Usage](#usage)
--   [Logging](#logging)
--   [Betting Strategy](#betting-strategy)
--   [Troubleshooting](#troubleshooting)
--   [Contributing](#contributing)
--   [License](#license)
+This repository contains a Python-based betting bot for the Bac Bo game that monitors game results, sends Telegram notifications, and uses specific betting strategies to automate bets. The bot integrates with Telegram to provide real-time alerts and updates, including scoreboard details and bet outcomes.
 
 ## Features
 
--   **Automated Monitoring**: Continuously monitors betting results from a target website using Selenium WebDriver.
--   **Custom Betting Strategies**: Implements predefined betting patterns with support for gales (martingale strategy).
--   **Real-time Notifications**: Sends updates and alerts to your Telegram channel using a Telegram bot.
--   **Asynchronous Operations**: Utilizes `asyncio` for efficient asynchronous task handling.
--   **Error Handling & Logging**: Comprehensive logging of events and errors for easy troubleshooting.
+-   **Automated Bet Execution:** Uses custom strategies to identify betting patterns and automatically places bets accordingly.
+-   **Telegram Integration:** Sends notifications, bet instructions, and updates to a specified Telegram channel.
+-   **Daily Restart:** The bot is scheduled to restart daily to maintain stability.
+-   **Custom Betting Strategies:** You can define your own patterns and betting behaviors.
+-   **Scoreboard Tracking:** Tracks wins, losses, and calculates assertivity (win rate).
+-   **Docker Support:** Easily deployable using Docker.
 
 ## Prerequisites
 
--   **Website Account**: You will need an active account on the specified betting website for the script to function.
--   Python 3.7+
--   Google Chrome Browser
--   ChromeDriver: Ensure that the ChromeDriver version matches your installed Chrome browser version. [Download ChromeDriver](https://chromedriver.chromium.org/downloads)
--   Telegram Bot: Create a Telegram bot and obtain the bot token. [Creating a Telegram Bot](https://core.telegram.org/bots)
--   Telegram Channel: Create a Telegram channel and obtain the channel ID.
+-   Python 3.10
+-   Google Chrome & Chromedriver
+-   Selenium
+-   A Telegram bot token and channel ID
+-   Docker (optional for containerized deployment)
 
 ## Installation
 
-### Clone the Repository
+1. **Clone the repository:**
 
-```bash
-git clone https://github.com/yourusername/betting-strategy-automation.git
-cd betting-strategy-automation
-```
+    ```sh
+    git clone https://github.com/yourusername/telegram-betting-bot.git
+    cd telegram-betting-bot
+    ```
 
-### Create a Virtual Environment (Optional but Recommended)
+2. **Set up environment variables:**
+   Create a `.env` file in the root directory with the following content (you can use the `.env-example` file as a reference):
 
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+    ```env
+    TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+    TELEGRAM_CHANNEL_ID=your_telegram_channel_id
+    WIN_STICKER_ID=your_win_sticker_id
+    LOSS_STICKER_ID=your_loss_sticker_id
+    CLOSE_STICKER_ID=your_close_sticker_id
+    OPEN_STICKER_ID=your_open_sticker_id
+    LOGIN_USERNAME=your_login_username
+    LOGIN_PASSWORD=your_login_password
+    ```
 
-### Install Dependencies
+    Replace the placeholders with your actual Telegram bot token, channel ID, stickers, and login credentials.
 
-```bash
-pip install -r requirements.txt
-```
+3. **Install dependencies:**
+   Make sure you have `pip` installed, then run:
 
-If `requirements.txt` is not provided, install the necessary packages manually:
+    ```sh
+    pip install -r requirements.txt
+    ```
 
-```bash
-pip install selenium python-dotenv python-telegram-bot
-```
+4. **Install Google Chrome and Chromedriver:**
+   This bot uses Selenium, which requires Chrome and Chromedriver:
 
-### Download ChromeDriver
+    - Chrome: [Download here](https://www.google.com/chrome/)
+    - Chromedriver: Make sure it matches the installed Chrome version. [Download here](https://sites.google.com/chromium.org/driver/)
 
-Download the ChromeDriver executable that matches your Chrome browser version from [here](https://chromedriver.chromium.org/downloads).
-Place the chromedriver executable in a directory that's in your system's PATH, or specify its path in the script.
+5. **Run the bot:**
+    ```sh
+    python main.py
+    ```
+
+## Running with Docker
+
+1. **Build the Docker image:**
+
+    ```sh
+    docker build -t telegram-betting-bot .
+    ```
+
+2. **Run the Docker container:**
+    ```sh
+    docker run -d --env-file .env --name betting-bot telegram-betting-bot
+    ```
 
 ## Configuration
 
-### Create a .env File
+### Betting Strategies
 
-In the root directory of the project, create a `.env` file and add the following variables:
+The bot uses customizable betting strategies defined in the `strategies` variable. Each strategy consists of:
 
-```env
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_CHANNEL_ID=your_telegram_channel_id
-```
+-   **Pattern:** The sequence to match before placing a bet.
+-   **Bet:** The action to take if the pattern is matched.
 
--   `TELEGRAM_BOT_TOKEN`: The token you received from BotFather when creating your Telegram bot.
--   `TELEGRAM_CHANNEL_ID`: The unique identifier for your Telegram channel. You can obtain this by adding your bot to the channel and sending a message, then using the Telegram API to get updates.
-
-### Set Up ChromeDriver Path (If Necessary)
-
-If ChromeDriver is not in your system's PATH, modify the `webdriver.Chrome()` initialization in the script to include the executable path:
+For example:
 
 ```python
-driver = webdriver.Chrome(executable_path='/path/to/chromedriver')
+strategies = [
+    {'pattern': ['P', 'P', 'P'], 'bet': 'B'},
+    {'pattern': ['B', 'B', 'B'], 'bet': 'P'},
+]
 ```
+
+-   `'P'` and `'B'` represent different bet options.
+
+### Scoreboard Tracking
+
+The bot tracks the number of wins, losses, and calculates the assertivity rate (win rate). The scoreboard is displayed after each bet, and updates are sent to the Telegram channel.
+
+### Daily Restart
+
+To ensure the bot runs smoothly, it automatically restarts daily at a predefined time. You can modify the restart time in the `schedule_restart` function in `main.py`.
 
 ## Usage
 
-### Run the Script
+-   The bot will continuously monitor the Bac Bo game results and apply the betting strategy as defined.
+-   Alerts are sent to the specified Telegram channel, including bet instructions, win/loss notifications, and scoreboard updates.
+-   Stickers are sent for different events (e.g., start, win, loss) if configured.
 
-```bash
-python main.py
-```
+## Important Notes
 
-Replace `main.py` with the actual name of your Python script.
-
-### Monitoring
-
-The script will start monitoring the betting results from the specified website. Based on the predefined strategies, it will send notifications to your Telegram channel.
-
-## Logging
-
--   **Log File**: All logs are stored in `logs.log` in the root directory.
--   **Log Details**: The log file includes timestamps, log levels, and detailed messages for each event and error.
-
-## Betting Strategy
-
-The `BettingStrategy` class implements the following strategies:
-
--   **Pattern Matching**: Detects specific patterns in the latest betting results to decide the next signal.
--   **Gale System**: If a signal fails, the script increases the signal frequency (gales) up to a maximum number to maintain consistency.
-
-### Defined Strategies
-
--   Pattern: `['P', 'P', 'P']` → Signal: `'B'` (with up to 2 gales)
--   Pattern: `['B', 'B', 'B']` → Signal: `'P'` (with up to 2 gales)
--   Pattern: `['B', 'B', 'P']` → Signal: `'P'` (with up to 2 gales)
--   Pattern: `['P', 'P', 'B']` → Signal: `'B'` (with up to 2 gales)
-
-You can modify or add strategies by editing the `strategies` list in the script.
-
-## Troubleshooting
-
-### ChromeDriver Issues
-
--   Ensure that the ChromeDriver version matches your installed Chrome browser version.
--   Verify that ChromeDriver is in your system's PATH or correctly specified in the script.
-
-### Telegram Bot Errors
-
--   Double-check the `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHANNEL_ID` in your `.env` file.
--   Ensure that the bot has the necessary permissions to post in the channel.
-
-### Selenium Exceptions
-
--   The script includes retry mechanisms for finding iframes and result elements. If issues persist, verify the XPaths used in the script are still valid by inspecting the target website.
-
-### Logging
-
--   Check `logs.log` for detailed error messages and events to help diagnose issues.
-
-## Contributing
-
-Contributions are welcome! Please follow these steps:
-
-### Fork the Repository
-
-### Create a Feature Branch
-
-```bash
-git checkout -b feature/YourFeature
-```
-
-### Commit Your Changes
-
-```bash
-git commit -m "Add your message"
-```
-
-### Push to the Branch
-
-```bash
-git push origin feature/YourFeature
-```
-
-### Open a Pull Request
+-   **Gambling Disclaimer:** This bot is intended for educational purposes only. Betting involves risks, and the bot does not guarantee winning results.
+-   **Telegram API Limits:** Make sure not to exceed Telegram's rate limits to avoid being blocked.
+-   **Use Responsibly:** Automating bets can lead to significant financial loss. Use at your own risk.
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
 
----
+## Contributing
 
-**Disclaimer**: This app does not guarantee financial gain and is for informational purposes only. Ensure you understand the limitations and use it responsibly. This script is provided "as is" without any warranties. Use it at your own risk.
+Feel free to open issues or submit pull requests if you have any improvements or suggestions for the bot.
