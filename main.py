@@ -1,6 +1,5 @@
 import os
 import asyncio
-import logging
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
@@ -37,14 +36,6 @@ if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID or not LOGIN_USERNAME or no
 
 # Initialize Telegram bot
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
-
-# Configure logging
-logging.basicConfig(
-    filename='logs.log',
-    filemode='a',
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    level=logging.ERROR
-)
 
 # Define Telegram link messages for registration and scoreboard
 LINK_MESSAGE_ENTRY_BUTTON = ('Register here', 'https://example.com/register')
@@ -129,8 +120,10 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False, butto
     # Send a message or sticker to the Telegram channel
     try:
         if is_win and WIN_STICKER_ID:
+            print("Sending win sticker...")
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
         elif is_loss and LOSS_STICKER_ID:
+            print("Sending loss sticker...")
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
         elif message:
             if buttons:
@@ -138,9 +131,10 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False, butto
                 sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message, reply_markup=reply_markup)
             else:
                 sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
+            print(f"Message sent: {message}")
             return sent_message.message_id
     except TelegramError as e:
-        logging.error(f"❌ Failed to send message: {e}")
+        print(f"❌ Failed to send message: {e}")
 
 class BettingStrategy:
     def __init__(self, strategies, max_gales=MAX_GALES):
@@ -182,7 +176,7 @@ class BettingStrategy:
                         try:
                             await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
                         except TelegramError as e:
-                            logging.error(f"❌ Failed to delete prepare message: {e}")
+                            print(f"❌ Failed to delete prepare message: {e}")
                     message = get_bet_message(bet)
                     await send_telegram_message(message, buttons=[LINK_MESSAGE_ENTRY_BUTTON])
                     self.is_entry_allowed = False
@@ -200,7 +194,7 @@ class BettingStrategy:
                 try:
                     await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
                 except TelegramError as e:
-                    logging.error(f"❌ Failed to delete prepare message: {e}")
+                    print(f"❌ Failed to delete prepare message: {e}")
                 self.prepare_message_sent = False
                 self.prepare_message_id = None
             return
@@ -246,7 +240,7 @@ class BettingStrategy:
             try:
                 await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=message_id)
             except TelegramError as e:
-                logging.error(f"❌ Failed to delete gale message with ID {message_id}: {e}")
+                print(f"❌ Failed to delete gale message with ID {message_id}: {e}")
         self.gale_message_ids.clear()
 
     async def reset_state(self, wait_after_gale=False):
@@ -298,15 +292,15 @@ def sync_fetch_results(driver, main_window):
 
     except NoSuchElementException as e:
         message = f"❌ Element not found: {e}\n{traceback.format_exc()}"
-        logging.error(message)
+        print(message)
         return {"error": message}
     except TimeoutException as e:
         message = f"❌ Timeout while waiting for an element: {e}\n{traceback.format_exc()}"
-        logging.error(message)
+        print(message)
         return {"error": message}
     except Exception as e:
         message = f"❌ General error occurred: {e}\n{traceback.format_exc()}"
-        logging.error(message)
+        print(message)
         return {"error": message}
     finally:
         driver.switch_to.default_content()
@@ -327,8 +321,8 @@ async def schedule_restart():
         sleep_duration = (target_time - now).total_seconds()
         await asyncio.sleep(sleep_duration)
 
+        print("Restarting bot...")
         await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=CLOSE_STICKER_ID)
-        logging.info("Restarting bot...")
         os.execv(sys.executable, ['python'] + sys.argv)
 
 async def main():
@@ -387,7 +381,7 @@ async def main():
         pass
     except Exception as e:
         message = f"❌ An unexpected error occurred: {e}"
-        logging.error(message)
+        print(message)
     finally:
         driver.quit()
 
