@@ -39,7 +39,7 @@ logging.basicConfig(
     filename='logs.log',
     filemode='a',
     format='%(asctime)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.ERROR
 )
 
 # =========================
@@ -58,8 +58,8 @@ BET_COLORS = {
 }
 
 BET_MESSAGES = {
-    'P': "🚨 ENTRY CONFIRMED\n🌹 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})",
-    'B': "🚨 ENTRY CONFIRMED\n🌹 BET ON COLOR ({color})\n🎯 PROTECT IN TIE ({tie_color})"
+    'P': "🚨 ENTRY CONFIRMED 🌹 BET ON COLOR ({color}) 🎯 PROTECT IN TIE ({tie_color})",
+    'B': "🚨 ENTRY CONFIRMED 🌹 BET ON COLOR ({color}) 🎯 PROTECT IN TIE ({tie_color})"
 }
 
 GALE_MESSAGE = "📉 GALE ATTEMPT {attempt}"
@@ -121,9 +121,9 @@ class Scoreboard:
 
     def generate_scoreboard_message(self):
         return (
-            f"📜 SCOREBOARD\n"
-            f"🟢 Wins: {self.wins} 🔴 Losses: {self.losses}\n"
-            f"🌄 Consecutive Wins: {self.consecutive_wins}\n"
+            f"📜 SCOREBOARD"
+            f"🟢 Wins: {self.wins} 🔴 Losses: {self.losses}"
+            f"🌄 Consecutive Wins: {self.consecutive_wins}"
             f"🎯 Assertivity Rate: {self.calculate_assertivity_rate()}%"
         )
 
@@ -147,11 +147,9 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False, butto
         # Send win sticker if it's a win and WIN_STICKER_ID is set
         if is_win and WIN_STICKER_ID:
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
-            logging.info("🏆 Win sticker sent.")
         # Send loss sticker if it's a loss and LOSS_STICKER_ID is set
         elif is_loss and LOSS_STICKER_ID:
             await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
-            logging.info("🔴 Loss sticker sent.")
         # Send the message only if it's not a win/loss or no sticker ID is available
         elif message:
             if buttons:
@@ -159,7 +157,6 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False, butto
                 sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message, reply_markup=reply_markup)
             else:
                 sent_message = await bot.send_message(chat_id=TELEGRAM_CHANNEL_ID, text=message)
-            logging.info(f"✅ Message sent: {message}")
             return sent_message.message_id  # Return the message ID
     except TelegramError as e:
         # Log the error but do not send it to Telegram
@@ -200,7 +197,6 @@ class BettingStrategy:
         if self.wait_after_gale:
             # Wait one more play after a gale win or loss before starting again
             self.wait_after_gale = False
-            logging.info("🔄 Waiting one more play after gale outcome.")
             return
 
         if self.is_entry_allowed:
@@ -217,12 +213,10 @@ class BettingStrategy:
                     if self.prepare_message_id:
                         try:
                             await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
-                            logging.info("🗑️ Deleted prepare message.")
                         except TelegramError as e:
                             logging.error(f"❌ Failed to delete prepare message: {e}")
 
                     message = get_bet_message(bet)  # Use the custom message
-                    print(message)
                     await send_telegram_message(message, buttons=[LINK_MESSAGE_ENTRY_BUTTON])
                     self.is_entry_allowed = False
                     self.is_green = True
@@ -239,7 +233,6 @@ class BettingStrategy:
             if self.prepare_message_sent and self.prepare_message_id:
                 try:
                     await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=self.prepare_message_id)
-                    logging.info("🗑️ Deleted prepare message after no match.")
                 except TelegramError as e:
                     logging.error(f"❌ Failed to delete prepare message: {e}")
                 self.prepare_message_sent = False
@@ -248,7 +241,6 @@ class BettingStrategy:
 
         if results_list[-1] == self.current_bet and self.is_green:
             scoreboard.record_win()
-            print("✅ WIN!")
             await send_telegram_message(is_win=True)  # Send only the win sticker
             await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
@@ -257,7 +249,6 @@ class BettingStrategy:
 
         if results_list[-1] == 'T' and self.is_green:
             scoreboard.record_win()
-            print("✅ WIN!(tie)")
             await send_telegram_message(is_win=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
@@ -277,7 +268,6 @@ class BettingStrategy:
 
         if self.is_red:
             scoreboard.record_loss()
-            print("🔴 LOSS!")
             await send_telegram_message(is_loss=True)
             await send_telegram_message(scoreboard.generate_scoreboard_message(), buttons=[LINK_MESSAGE_SCOREBOARD_BUTTON])
             await self.delete_gale_messages()  # Delete all gale messages
@@ -291,7 +281,6 @@ class BettingStrategy:
         for message_id in self.gale_message_ids:
             try:
                 await bot.delete_message(chat_id=TELEGRAM_CHANNEL_ID, message_id=message_id)
-                logging.info(f"🗑️ Deleted gale message with ID: {message_id}")
             except TelegramError as e:
                 logging.error(f"❌ Failed to delete gale message with ID {message_id}: {e}")
         self.gale_message_ids.clear()
@@ -313,7 +302,6 @@ class BettingStrategy:
         self.prepare_message_id = None
         self.gale_message_ids.clear()
         self.wait_after_gale = wait_after_gale
-        logging.info("🔄 State has been reset.")
 
 # =========================
 # Selenium Fetch Results
@@ -350,10 +338,7 @@ def sync_fetch_results(driver, main_window):
                 webdriver.ActionChains(driver).move_to_element_with_offset(
                     body_element, random.randint(1, 10), random.randint(1, 10)
                 ).click().perform()
-                logging.info("🖱️ Click performed inside iframe to bypass AFK detector.")
             except TimeoutException:
-                message = f"Iframe not found: {path}"
-                logging.warning(message)
                 continue
 
         # Wait for the result element to be present
@@ -363,9 +348,6 @@ def sync_fetch_results(driver, main_window):
         # Extract and process the results
         results_text = result_element.text
         results = results_text.split()[::-1][:3][::-1]
-        message = f"🔍 Fetched Results: {results}"
-        print(message)
-        logging.info(message)
         return {"results": results}
 
     except NoSuchElementException as e:
@@ -402,14 +384,13 @@ async def async_fetch_results(executor, driver, main_window):
 # =========================
 
 async def main():
-    # Set Chrome options for headless mode
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # Run in headless mode
     chrome_options.add_argument('--no-sandbox')  # Bypass OS security model, useful for Docker
     chrome_options.add_argument('--disable-dev-shm-usage')  # Overcome limited resource problems in containerized environments
     chrome_options.add_argument('--disable-gpu')  # Disable GPU (optional but recommended for better compatibility)
     chrome_options.add_argument("--mute-audio")
-    
+
     # Initialize WebDriver
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     driver.implicitly_wait(10)
@@ -433,9 +414,8 @@ async def main():
             
             # Wait for the modal to disappear, indicating a successful login
             WebDriverWait(driver, 30).until(EC.invisibility_of_element((By.CLASS_NAME, 'modal-dialog')))
-            logging.info("✅ Successfully logged in.")
         except TimeoutException:
-            logging.info("🔑 Login modal not found. Proceeding without login.")
+            pass
         
         main_window = driver.window_handles[0]
 
@@ -469,15 +449,12 @@ async def main():
             result = await async_fetch_results(executor, driver, main_window)
 
             if "error" in result:
-                # Do not send error messages to Telegram
-                logging.error(f"⚠️ {result['error']} Retrying...")
                 await asyncio.sleep(5)
                 continue
 
             results_list = result.get("results", [])
 
             if not results_list:
-                logging.warning("⚠️ No results obtained. Retrying...")
                 await asyncio.sleep(5)
                 continue
 
@@ -492,24 +469,17 @@ async def main():
                 # Execute betting strategy if the guard condition is met
                 if betting_strategy.can_check_patterns:
                     await betting_strategy.execute_strategy(results_list)
-                else:
-                    logging.info("⏳ Gathering initial results before starting pattern matching...")
-            else:
-                logging.info("🔄 No new results. Waiting for updates...")
 
             # Wait for a while before checking again
             await asyncio.sleep(5)
 
     except KeyboardInterrupt:
-        message = "⏹ Program interrupted by user."
-        logging.info(message)
+        pass
     except Exception as e:
         message = f"❌ An unexpected error occurred: {e}"
         logging.error(message)
     finally:
         driver.quit()
-        message = "🔒 WebDriver has been closed."
-        logging.info(message)
 
 # =========================
 # Entry Point
@@ -517,4 +487,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
