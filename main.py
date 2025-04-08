@@ -121,10 +121,12 @@ async def send_telegram_message(message=None, is_win=False, is_loss=False, butto
     try:
         if is_win and WIN_STICKER_ID:
             print("Sending win sticker...")
-            await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
+            sent_message = await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=WIN_STICKER_ID)
+            return sent_message.message_id
         elif is_loss and LOSS_STICKER_ID:
             print("Sending loss sticker...")
-            await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
+            sent_message = await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=LOSS_STICKER_ID)
+            return sent_message.message_id
         elif message:
             if buttons:
                 reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(text, url=url) for text, url in buttons]])
@@ -334,7 +336,9 @@ async def main():
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--mute-audio')
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    CHROMEDRIVER_PATH = r'C:\Users\Utilizador\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe'
+
+    driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH, options=chrome_options)
     driver.implicitly_wait(10)
 
     try:
@@ -415,4 +419,5 @@ async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_
         await asyncio.sleep(5)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+ loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
