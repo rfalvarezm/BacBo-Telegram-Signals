@@ -1,4 +1,5 @@
 import os
+import logging
 import asyncio
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -16,6 +17,7 @@ import traceback
 import random
 import datetime
 import sys
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -274,22 +276,32 @@ def sync_fetch_results(driver, main_window):
             '/html/body/div[5]/div[2]/iframe'
         ]
 
+        # Attempt to switch to each iframe
         for path in iframe_paths:
             try:
-                iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, path)))
+                print(f"Attempting to switch to iframe with path: {path}")
+                iframe = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, path)))
                 driver.switch_to.frame(iframe)
+                
                 body_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
-                webdriver.ActionChains(driver).move_to_element_with_offset(
+                # Click using ActionChains with random offsets
+                ActionChains(driver).move_to_element_with_offset(
                     body_element, random.randint(1, 10), random.randint(1, 10)
                 ).click().perform()
-            except TimeoutException:
-                continue
+                print(f"Clicked within iframe: {path}")
+                break  # Exit the loop once a successful click is made
+            except TimeoutException as e:
+                print(f"Timeout while waiting for iframe with path: {path}. Error: {e}")
+                continue  # Try next iframe if one fails
 
+        # Fetch the target element after iframe interaction
         target_xpath = '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div'
-        result_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, target_xpath)))
+        result_element = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, target_xpath)))
 
+        # Extract the results from the element's text
         results_text = result_element.text
         results = results_text.split()[::-1][:3][::-1]
+        print(f"Fetched results: {results}")
         return {"results": results}
 
     except NoSuchElementException as e:
@@ -306,29 +318,29 @@ def sync_fetch_results(driver, main_window):
         return {"error": message}
     finally:
         driver.switch_to.default_content()
+        print("Switched back to the default content.")
 
+# Asynchronous wrapper function to run the synchronous fetch in a separate thread
 async def async_fetch_results(executor, driver, main_window):
-    # Asynchronously fetch results using a thread executor
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, sync_fetch_results, driver, main_window)
 
-async def schedule_restart():
-    # Schedule a daily restart at a specific time
-    while True:
-        now = datetime.datetime.now()
-        target_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        if now >= target_time:
-            target_time += datetime.timedelta(days=1)
+# Set up logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-        sleep_duration = (target_time - now).total_seconds()
-        await asyncio.sleep(sleep_duration)
+# Fetch variables from .env file
+LOGIN_USERNAME = os.getenv("LOGIN_USERNAME")
+LOGIN_PASSWORD = os.getenv("LOGIN_PASSWORD")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHANNEL_ID = os.getenv("TELEGRAM_CHANNEL_ID")
+OPEN_STICKER_ID = os.getenv("OPEN_STICKER_ID")
+MAX_GALES = 5
 
-        print("Restarting bot...")
-        await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=CLOSE_STICKER_ID)
-        os.execv(sys.executable, ['python'] + sys.argv)
+# Assuming BettingStrategy and other functions (e.g., bot.send_sticker, run_bot_loop, schedule_restart) are already defined
 
 async def main():
-    # Main function to start the bot
+    # Chrome options setup
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
@@ -336,25 +348,37 @@ async def main():
     chrome_options.add_argument('--disable-dev-shm-usage')
     chrome_options.add_argument('--mute-audio')
 
-    CHROMEDRIVER_PATH = r'C:\Users\Utilizador\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe'
-
-    driver = webdriver.Chrome(executable_path=CHROMEDRIVER_PATH, options=chrome_options)
-    driver.implicitly_wait(10)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver.implicitly_wait(10)  # Adjusted for better performance
 
     try:
         driver.get('https://www.bettilt641.com/pt/game/bac-bo/real')
+        logger.info("Page loaded successfully.")
+
         try:
-            login_modal = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CLASS_NAME, 'modal-content')))
+            logger.info("Waiting for login modal to appear...")
+            # Wait for login modal to appear
+            login_modal = WebDriverWait(driver, 40).until(EC.presence_of_element_located((By.CLASS_NAME, 'modal-content')))
+            logger.info("Login modal appeared.")
+
             username_field = login_modal.find_element(By.XPATH, '//input[@type="text" or @name="username"]')
             password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
+
             username_field.send_keys(LOGIN_USERNAME)
             password_field.send_keys(LOGIN_PASSWORD)
+
             login_button = login_modal.find_element(By.XPATH, '//button[contains(@class, "styles__Button") and @type="submit"]')
             login_button.click()
+
+            # Wait for the login modal to disappear
             WebDriverWait(driver, 30).until(EC.invisibility_of_element((By.CLASS_NAME, 'modal-dialog')))
+            logger.info("Login successful!")
+
         except TimeoutException:
-            pass
-        
+            logger.error("Login modal did not appear or timeout reached.")
+            return
+
         main_window = driver.window_handles[0]
 
         # Define betting strategies
@@ -366,28 +390,35 @@ async def main():
         ]
 
         betting_strategy = BettingStrategy(strategies=strategies, max_gales=MAX_GALES)
-        
+
+        # Send an initial sticker via Telegram bot
         await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=OPEN_STICKER_ID)
+        logger.info("Initial sticker sent.")
 
         prev_results = []
         
+        # Adjust concurrency settings if needed
         executor = ThreadPoolExecutor(max_workers=1)
         betting_strategy.can_check_patterns = False
         initial_results_required = 3
 
-        # Run bot loop and schedule restart concurrently
+        # Run the bot loop and schedule restart concurrently
         await asyncio.gather(
             run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results),
             schedule_restart()
         )
 
     except KeyboardInterrupt:
-        pass
+        logger.info("Bot stopped by user.")
     except Exception as e:
-        message = f"❌ An unexpected error occurred: {e}"
-        print(message)
+        logger.error(f"❌ An unexpected error occurred: {e}")
     finally:
         driver.quit()
+        logger.info("Driver quit and bot stopped.")
+
+# Ensure event loop is started properly
+if __name__ == "__main__":
+    asyncio.run(main())  # Running the async main function
 
 async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results):
     # Main loop to monitor results and execute bets
@@ -411,6 +442,7 @@ async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_
                 betting_strategy.can_check_patterns = True
 
             if betting_strategy.can_check_patterns:
+                # Correctly execute betting strategy
                 await betting_strategy.execute_strategy(results_list)
 
         if betting_strategy.stop_requested:
@@ -419,5 +451,5 @@ async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_
         await asyncio.sleep(5)
 
 if __name__ == "__main__":
- loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
