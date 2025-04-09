@@ -420,8 +420,27 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())  # Running the async main function
 
+class BettingStrategy:
+    def __init__(self):
+        self.can_check_patterns = False
+        self.stop_requested = False
+
+    async def execute_strategy(self, results_list):
+        print("Executando estratégia com resultados:", results_list)
+        # Simula uma condição de paragem
+        if "Parar" in results_list:
+            self.stop_requested = True
+
+async def async_fetch_results(executor, driver, main_window):
+    loop = asyncio.get_running_loop()
+
+    def fetch():
+        # Simular scraping
+        return {"results": ["Jogador", "Banco"]}
+
+    return await loop.run_in_executor(executor, fetch)
+
 async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results):
-    # Main loop to monitor results and execute bets
     while True:
         result = await async_fetch_results(executor, driver, main_window)
 
@@ -442,14 +461,22 @@ async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_
                 betting_strategy.can_check_patterns = True
 
             if betting_strategy.can_check_patterns:
-                # Correctly execute betting strategy
                 await betting_strategy.execute_strategy(results_list)
 
         if betting_strategy.stop_requested:
+            print("Bot a parar...")
+            driver.quit()
             break
 
         await asyncio.sleep(5)
 
+async def main():
+    executor = ThreadPoolExecutor(max_workers=1)
+    driver = webdriver.Chrome()
+    main_window = driver.current_window_handle
+    betting_strategy = BettingStrategy()
+    prev_results = []
+    await run_bot_loop(executor, driver, main_window, betting_strategy, 2, prev_results)
+
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())
