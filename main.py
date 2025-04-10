@@ -32,6 +32,10 @@ OPEN_STICKER_ID = os.getenv('OPEN_STICKER_ID')
 LOGIN_USERNAME = os.getenv('LOGIN_USERNAME')
 LOGIN_PASSWORD = os.getenv('LOGIN_PASSWORD')
 
+# Check if the variables are loaded correctly
+print(f"Loaded username: {LOGIN_USERNAME}")
+print(f"Loaded password: {LOGIN_PASSWORD}")
+
 # Ensure all necessary environment variables are set
 if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHANNEL_ID or not LOGIN_USERNAME or not LOGIN_PASSWORD:
     raise ValueError("TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID, LOGIN_USERNAME, and LOGIN_PASSWORD must be set in the .env file.")
@@ -323,6 +327,7 @@ def sync_fetch_results(driver, main_window):
 # Asynchronous wrapper function to run the synchronous fetch in a separate thread
 async def async_fetch_results(executor, driver, main_window):
     loop = asyncio.get_running_loop()
+
     return await loop.run_in_executor(executor, sync_fetch_results, driver, main_window)
 
 # Set up logger
@@ -339,6 +344,61 @@ MAX_GALES = 5
 
 # Assuming BettingStrategy and other functions (e.g., bot.send_sticker, run_bot_loop, schedule_restart) are already defined
 
+async def login(driver):
+    try:
+        logger.info("Loading the page...")
+        driver.get('https://www.bettilt641.com/pt/game/bac-bo/real')
+
+        logger.info("Checking if already logged in...")
+        if is_logged_in(driver):
+            logger.info("✅ Already logged in.")
+            return True  # If logged in, skip the login process
+
+        logger.info("Waiting for login modal to appear...")
+        login_modal = WebDriverWait(driver, 40).until(
+            EC.visibility_of_element_located((By.CLASS_NAME, 'modal-content'))
+        )
+        logger.info("✅ Login modal appeared.")
+
+        username_field = WebDriverWait(login_modal, 10).until(
+            EC.visibility_of_element_located((By.XPATH, '//input[@type="text" or @name="username"]'))
+        )
+        password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
+
+        username_field.clear()
+        username_field.send_keys(LOGIN_USERNAME)
+        password_field.send_keys(LOGIN_PASSWORD)
+
+        login_button = login_modal.find_element(
+            By.XPATH, '//button[contains(@class, "styles__Button") and @type="submit"]'
+        )
+        login_button.click()
+
+        # Wait until login modal disappears (indicating successful login)
+        WebDriverWait(driver, 30).until(
+            EC.invisibility_of_element_located((By.CLASS_NAME, 'modal-dialog'))
+        )
+        logger.info("✅ Login successful.")
+        return True
+
+    except TimeoutException:
+        logger.error("❌ Timeout: Login modal did not appear or did not disappear in time.")
+        driver.save_screenshot("erro_login_timeout.png")
+        with open("login_timeout_debug.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        return False
+
+    except NoSuchElementException:
+        logger.error("❌ Login element not found.")
+        driver.save_screenshot("erro_login_elemento.png")
+        return False
+
+    except Exception as e:
+        logger.error(f"❌ Unexpected error during login: {e}")
+        driver.save_screenshot("erro_login_inesperado.png")
+        return False
+
+
 async def main():
     # Chrome options setup
     chrome_options = Options()
@@ -353,30 +413,9 @@ async def main():
     driver.implicitly_wait(10)  # Adjusted for better performance
 
     try:
-        driver.get('https://www.bettilt641.com/pt/game/bac-bo/real')
-        logger.info("Page loaded successfully.")
-
-        try:
-            logger.info("Waiting for login modal to appear...")
-            # Wait for login modal to appear
-            login_modal = WebDriverWait(driver, 40).until(EC.presence_of_element_located((By.CLASS_NAME, 'modal-content')))
-            logger.info("Login modal appeared.")
-
-            username_field = login_modal.find_element(By.XPATH, '//input[@type="text" or @name="username"]')
-            password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
-
-            username_field.send_keys(LOGIN_USERNAME)
-            password_field.send_keys(LOGIN_PASSWORD)
-
-            login_button = login_modal.find_element(By.XPATH, '//button[contains(@class, "styles__Button") and @type="submit"]')
-            login_button.click()
-
-            # Wait for the login modal to disappear
-            WebDriverWait(driver, 30).until(EC.invisibility_of_element((By.CLASS_NAME, 'modal-dialog')))
-            logger.info("Login successful!")
-
-        except TimeoutException:
-            logger.error("Login modal did not appear or timeout reached.")
+        login_ok = await login(driver)
+        if not login_ok:
+            logger.error("⚠️ Login failed. Exiting...")
             return
 
         main_window = driver.window_handles[0]
@@ -393,7 +432,7 @@ async def main():
 
         # Send an initial sticker via Telegram bot
         await bot.send_sticker(chat_id=TELEGRAM_CHANNEL_ID, sticker=OPEN_STICKER_ID)
-        logger.info("Initial sticker sent.")
+        logger.info("📤 Initial sticker sent.")
 
         prev_results = []
         
@@ -409,12 +448,12 @@ async def main():
         )
 
     except KeyboardInterrupt:
-        logger.info("Bot stopped by user.")
+        logger.info("⛔ Bot stopped by user.")
     except Exception as e:
         logger.error(f"❌ An unexpected error occurred: {e}")
     finally:
         driver.quit()
-        logger.info("Driver quit and bot stopped.")
+        logger.info("🛑 Driver quit and bot stopped.")
 
 # Ensure event loop is started properly
 if __name__ == "__main__":
@@ -442,6 +481,11 @@ async def async_fetch_results(executor, driver, main_window):
 
 async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results):
     while True:
+        if betting_strategy.stop_requested:
+            print("Bot a parar...")
+            driver.quit()
+            break
+
         result = await async_fetch_results(executor, driver, main_window)
 
         if "error" in result:
@@ -454,19 +498,14 @@ async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_
             await asyncio.sleep(5)
             continue
 
-        if results_list != prev_results:
-            prev_results = results_list
+        if not prev_results or results_list != prev_results:
+            prev_results = results_list.copy()
 
             if len(prev_results) >= initial_results_required:
                 betting_strategy.can_check_patterns = True
 
             if betting_strategy.can_check_patterns:
                 await betting_strategy.execute_strategy(results_list)
-
-        if betting_strategy.stop_requested:
-            print("Bot a parar...")
-            driver.quit()
-            break
 
         await asyncio.sleep(5)
 
