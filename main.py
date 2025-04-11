@@ -349,18 +349,13 @@ async def login(driver):
         logger.info("Loading the page...")
         driver.get('https://www.bettilt641.com/pt/game/bac-bo/real')
 
-        logger.info("Checking if already logged in...")
-        if is_logged_in(driver):
-            logger.info("✅ Already logged in.")
-            return True  # If logged in, skip the login process
-
         logger.info("Waiting for login modal to appear...")
         login_modal = WebDriverWait(driver, 40).until(
             EC.visibility_of_element_located((By.CLASS_NAME, 'modal-content'))
         )
         logger.info("✅ Login modal appeared.")
 
-        username_field = WebDriverWait(login_modal, 10).until(
+        username_field = WebDriverWait(login_modal, 40).until(
             EC.visibility_of_element_located((By.XPATH, '//input[@type="text" or @name="username"]'))
         )
         password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
@@ -374,15 +369,27 @@ async def login(driver):
         )
         login_button.click()
 
-        # Wait until login modal disappears (indicating successful login)
-        WebDriverWait(driver, 30).until(
-            EC.invisibility_of_element_located((By.CLASS_NAME, 'modal-dialog'))
-        )
+        # Tenta identificar o login bem-sucedido com um seletor confiável
+        try:
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '.user-menu__name'))  # <-- substitui por algo certo pós-login
+            )
+        except TimeoutException:
+            # Mesmo que falhe aqui, vamos guardar o HTML para análise
+            driver.save_screenshot("login_maybe_success.png")
+            with open("login_maybe_success.html", "w", encoding="utf-8") as f:
+                f.write(driver.page_source)
+            raise
+
         logger.info("✅ Login successful.")
+        driver.save_screenshot("login_success.png")
+        with open("login_success_debug.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+
         return True
 
     except TimeoutException:
-        logger.error("❌ Timeout: Login modal did not appear or did not disappear in time.")
+        logger.error("❌ Timeout: Login modal did not appear or login check failed.")
         driver.save_screenshot("erro_login_timeout.png")
         with open("login_timeout_debug.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
