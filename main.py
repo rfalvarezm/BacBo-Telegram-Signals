@@ -17,6 +17,10 @@ import traceback
 import random
 import datetime
 import sys
+import time
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+
 
 
 # Load environment variables from .env file
@@ -269,6 +273,7 @@ class BettingStrategy:
         # Request to stop the bot after current cycle
         self.stop_requested = True
 
+"""
 def sync_fetch_results(driver, main_window):
     # Synchronously fetch results using Selenium
     try:
@@ -286,23 +291,21 @@ def sync_fetch_results(driver, main_window):
                 print(f"Attempting to switch to iframe with path: {path}")
                 iframe = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, path)))
                 driver.switch_to.frame(iframe)
-                
+
                 body_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
-                # Click using ActionChains with random offsets
                 ActionChains(driver).move_to_element_with_offset(
                     body_element, random.randint(1, 10), random.randint(1, 10)
                 ).click().perform()
                 print(f"Clicked within iframe: {path}")
-                break  # Exit the loop once a successful click is made
+                break
             except TimeoutException as e:
                 print(f"Timeout while waiting for iframe with path: {path}. Error: {e}")
-                continue  # Try next iframe if one fails
+                continue
 
         # Fetch the target element after iframe interaction
         target_xpath = '/html/body/div[4]/div/div/div[2]/div[6]/div/div[1]/div/div/div'
         result_element = WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, target_xpath)))
 
-        # Extract the results from the element's text
         results_text = result_element.text
         results = results_text.split()[::-1][:3][::-1]
         print(f"Fetched results: {results}")
@@ -312,17 +315,77 @@ def sync_fetch_results(driver, main_window):
         message = f"❌ Element not found: {e}\n{traceback.format_exc()}"
         print(message)
         return {"error": message}
+
     except TimeoutException as e:
         message = f"❌ Timeout while waiting for an element: {e}\n{traceback.format_exc()}"
         print(message)
+
+        # Salvar HTML da página atual
+        with open("iframe_source.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+
         return {"error": message}
+
     except Exception as e:
         message = f"❌ General error occurred: {e}\n{traceback.format_exc()}"
         print(message)
         return {"error": message}
+
     finally:
         driver.switch_to.default_content()
         print("Switched back to the default content.")
+
+"""
+
+from selenium.webdriver.common.action_chains import ActionChains
+
+def sync_fetch_results(driver, main_window):
+    try:
+        driver.switch_to.window(main_window)
+
+        iframe_paths = [
+            '/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]/div/iframe',
+            '/html/body/iframe',
+            '/html/body/div[5]/div[2]/iframe'
+        ]
+
+        for path in iframe_paths:
+            try:
+                print(f"Attempting to switch to iframe with path: {path}")
+                iframe = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.XPATH, path)))
+                driver.switch_to.frame(iframe)
+
+                # Clica dentro do iframe
+                body_element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'body')))
+                ActionChains(driver).move_to_element_with_offset(
+                    body_element, random.randint(1, 10), random.randint(1, 10)
+                ).click().perform()
+                print(f"Clicked within iframe: {path}")
+                break
+            except TimeoutException:
+                continue
+
+        # Encontrar todos os elementos <text> com fill="white"
+        texts = driver.find_elements(By.XPATH, '//text[@fill="white"]')
+        values = [t.text.strip() for t in texts if t.text.strip() in ["P", "B", "T"]]
+
+        if not values:
+            print("❌ Nenhum resultado encontrado nos textos.")
+            return {"results": []}
+
+        # Pegar os últimos 3 resultados
+        results = values[-3:]
+        print(f"Fetched results: {results}")
+        return {"results": results}
+
+    except Exception as e:
+        print(f"❌ Erro ao buscar resultados: {e}\n{traceback.format_exc()}")
+        return {"error": str(e)}
+
+    finally:
+        driver.switch_to.default_content()
+        print("Switched back to the default content.")
+
 
 # Asynchronous wrapper function to run the synchronous fetch in a separate thread
 async def async_fetch_results(executor, driver, main_window):
@@ -349,67 +412,77 @@ async def login(driver):
         logger.info("Loading the page...")
         driver.get('https://www.bettilt641.com/pt/game/bac-bo/real')
 
-        logger.info("Waiting for login modal to appear...")
-        login_modal = WebDriverWait(driver, 40).until(
-            EC.visibility_of_element_located((By.CLASS_NAME, 'modal-content'))
+        # Esperar até que a página carregue algo
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, 'body'))
         )
-        logger.info("✅ Login modal appeared.")
 
-        username_field = WebDriverWait(login_modal, 40).until(
-            EC.visibility_of_element_located((By.XPATH, '//input[@type="text" or @name="username"]'))
-        )
-        password_field = login_modal.find_element(By.XPATH, '//input[@type="password" or @name="password"]')
-
-        username_field.clear()
-        username_field.send_keys(LOGIN_USERNAME)
-        password_field.send_keys(LOGIN_PASSWORD)
-
-        login_button = login_modal.find_element(
-            By.XPATH, '//button[contains(@class, "styles__Button") and @type="submit"]'
-        )
-        login_button.click()
-
-        # Tenta identificar o login bem-sucedido com um seletor confiável
+        # Verificar se o utilizador já está logado
         try:
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '.user-menu__name'))  # <-- substitui por algo certo pós-login
-            )
-        except TimeoutException:
-            # Mesmo que falhe aqui, vamos guardar o HTML para análise
-            driver.save_screenshot("login_maybe_success.png")
-            with open("login_maybe_success.html", "w", encoding="utf-8") as f:
-                f.write(driver.page_source)
-            raise
-
-        logger.info("✅ Login successful.")
-        driver.save_screenshot("login_success.png")
-        with open("login_success_debug.html", "w", encoding="utf-8") as f:
-            f.write(driver.page_source)
-
-        return True
+            driver.find_element(By.CLASS_NAME, 'user-balance')  # Este é um elemento que só aparece após login
+            logger.info("✅ Já estás logado. A continuar...")
+            driver.save_screenshot("login_already_logged_in.png")
+            return True
+        except NoSuchElementException:
+            logger.warning("🔐 Não está logado, mas a continuar porque o perfil persistente deve funcionar.")
+            driver.save_screenshot("login_not_logged_in_but_skipped.png")
+            return True
 
     except TimeoutException:
-        logger.error("❌ Timeout: Login modal did not appear or login check failed.")
-        driver.save_screenshot("erro_login_timeout.png")
-        with open("login_timeout_debug.html", "w", encoding="utf-8") as f:
+        logger.error("❌ Timeout: A página não carregou corretamente.")
+        driver.save_screenshot("erro_timeout.png")
+        with open("timeout_debug.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
-        return False
-
-    except NoSuchElementException:
-        logger.error("❌ Login element not found.")
-        driver.save_screenshot("erro_login_elemento.png")
         return False
 
     except Exception as e:
-        logger.error(f"❌ Unexpected error during login: {e}")
-        driver.save_screenshot("erro_login_inesperado.png")
+        logger.error(f"❌ Erro inesperado: {e}")
+        driver.save_screenshot("erro_inesperado.png")
         return False
+    
+async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results):
+    while True:
+        if betting_strategy.stop_requested:
+            print("Bot a parar...")
+            driver.quit()
+            break
+
+        result = await async_fetch_results(executor, driver, main_window)
+
+        if "error" in result:
+            await asyncio.sleep(5)
+            continue
+
+        results_list = result.get("results", [])
+
+        if not results_list:
+            await asyncio.sleep(5)
+            continue
+
+        if not prev_results or results_list != prev_results:
+            prev_results = results_list.copy()
+
+            if len(prev_results) >= initial_results_required:
+                betting_strategy.can_check_patterns = True
+
+            if betting_strategy.can_check_patterns:
+                await betting_strategy.execute_strategy(results_list)
+
+        await asyncio.sleep(5)
+
+
+async def schedule_restart():
+    while True:
+        await asyncio.sleep(60 * 60 * 2)  # reinicia a cada 2 horas
+        logger.info("♻️ Tempo de reinício atingido. A reiniciar o bot...")
+        os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
 async def main():
     # Chrome options setup
     chrome_options = Options()
-    chrome_options.add_argument('--headless')
+    chrome_options.add_argument(r'--user-data-dir=C:\\Users\\Utilizador\\Desktop\\BacBo\\chrome-profile')
+    #chrome_options.add_argument('--headless')
     chrome_options.add_argument('--disable-gpu')
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
@@ -442,7 +515,7 @@ async def main():
         logger.info("📤 Initial sticker sent.")
 
         prev_results = []
-        
+
         # Adjust concurrency settings if needed
         executor = ThreadPoolExecutor(max_workers=1)
         betting_strategy.can_check_patterns = False
@@ -464,7 +537,7 @@ async def main():
 
 # Ensure event loop is started properly
 if __name__ == "__main__":
-    asyncio.run(main())  # Running the async main function
+    asyncio.run(main())  # Running the async main function:
 
 class BettingStrategy:
     def __init__(self):
@@ -486,35 +559,6 @@ async def async_fetch_results(executor, driver, main_window):
 
     return await loop.run_in_executor(executor, fetch)
 
-async def run_bot_loop(executor, driver, main_window, betting_strategy, initial_results_required, prev_results):
-    while True:
-        if betting_strategy.stop_requested:
-            print("Bot a parar...")
-            driver.quit()
-            break
-
-        result = await async_fetch_results(executor, driver, main_window)
-
-        if "error" in result:
-            await asyncio.sleep(5)
-            continue
-
-        results_list = result.get("results", [])
-
-        if not results_list:
-            await asyncio.sleep(5)
-            continue
-
-        if not prev_results or results_list != prev_results:
-            prev_results = results_list.copy()
-
-            if len(prev_results) >= initial_results_required:
-                betting_strategy.can_check_patterns = True
-
-            if betting_strategy.can_check_patterns:
-                await betting_strategy.execute_strategy(results_list)
-
-        await asyncio.sleep(5)
 
 async def main():
     executor = ThreadPoolExecutor(max_workers=1)

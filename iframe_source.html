@@ -1,0 +1,679 @@
+<html><head>
+        <title>Bac Bo</title>
+        <meta equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="requiresActiveX=true">
+        
+        <script type="text/javascript" src="/ps/static/jlib/jquery/js/jquery.min.2.1.0.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+    </head>
+    <body class="">
+    
+    
+		<style type="text/css">
+			html,body{margin:0;padding:0;height:100%;background-color:transparent;}
+			h1 {text-align:center;font-size:2em;margin:0.65em 0 0.3em;font-weight:bold;font-family:Ubuntu,Arial,"sans-serif";}
+			.warningMessage {text-align:center;font-size:1.2em;font-family:Arial,"sans-serif";padding:20px;margin:20px;}
+			.btn {
+				display: inline-block;
+				padding: 6px 12px;
+				margin-bottom: 0;
+				font-size: 14px;
+				font-weight: normal;
+				line-height: 1.42857143;
+				text-align: center;
+				white-space: nowrap;
+				vertical-align: middle;
+				-ms-touch-action: manipulation;
+				touch-action: manipulation;
+				cursor: pointer;
+				-webkit-user-select: none;
+				-moz-user-select: none;
+				-ms-user-select: none;
+				user-select: none;
+				background-image: none;
+				border: 1px solid transparent;
+				border-radius: 4px;
+				text-decoration: none;
+				font-family:Arial,"sans-serif";
+			}
+			.btn:focus,.btn.focus{outline: 5px auto -webkit-focus-ring-color;outline-offset: -2px;}
+			.btn:hover,
+			.btn:focus,
+			.btn.focus {color: #333;text-decoration: none;}
+
+
+			.btn-primary {
+				color: #ffffff;
+				background-color: #990000;
+				border-color: #800000;
+			}
+			.btn-primary:focus,
+			.btn-primary.focus {
+				color: #ffffff;
+				background-color: #660000;
+				border-color: #000000;
+			}
+			.btn-primary:hover {
+				color: #ffffff;
+				background-color: #660000;
+				border-color: #420000;
+			}
+
+			.btn-warning {
+				color: #ffffff;
+				background-color: #990000;
+				border-color: #800000;
+				padding: 10px 20px 10px 20px;
+				border-radius: 5px;
+			}
+			.btn-warning:focus,
+			.btn-warning.focus {
+				color: #ffffff;
+				background-color: #660000;
+				border-color: #000000;
+			}
+			.btn-warning:hover {
+				color: #ffffff;
+				background-color: #660000;
+				border-color: #420000;
+			}
+
+
+			.btn-success {
+				color: #fff;
+				background-color: #5cb85c;
+				border-color: #4cae4c;
+			}
+			.btn-success:focus,
+			.btn-success.focus {
+				color: #fff;
+				background-color: #449d44;
+				border-color: #255625;
+			}
+			.btn-success:hover {
+				color: #fff;
+				background-color: #449d44;
+				border-color: #398439;
+			}
+
+
+			.btn-default {
+				color: #ffffff;
+				background-color: #444444;
+				border-color: #373737;
+			}
+			.btn-default:focus,
+			.btn-default.focus {
+				color: #ffffff;
+				background-color: #2b2b2b;
+				border-color: #000000;
+			}
+			.btn-default:hover {
+				color: #ffffff;
+				background-color: #2b2b2b;
+				border-color: #191919;
+			}
+			.game-locked-for-player-div {
+				text-align: center;
+				font-family: Inter, sans-serif;
+				background: #191b1f;
+				height: 100%;
+				padding: 0 50px;
+			}
+			.locked-for-player-icon {
+				margin-top: 250px;
+				margin-bottom: 16px;
+				width: 120px;
+				height: 120px;
+			}
+			.centered-warning {
+				color: rgba(255, 255, 255, 0.9);
+				font-size: 20px;
+				font-style: normal;
+				font-weight: 500;
+				line-height: 30px;
+				max-width: 300px;
+				margin: 0 auto;
+			}
+			.centered-message {
+				color: #aeaed2;
+				font-size: 12px;
+				font-style: normal;
+				font-weight: 400;
+				line-height: 18px;
+				margin-top: 8px;
+			}
+
+		</style>
+
+        <iframe id="gameFrame" src="https://gtec.evo-games.com/entry?params=Y2FzaW5vX2lkPWRmNHVkdXh6Znlid3FnMzkKZ2FtZT1iYWNibwpzaWduYXR1cmU9akNhSnV6V2VzWTJTei1DdXpEM1BwcHNoYk9lalRPbTlac2k2T3dtSVoyNERYdXRjNmVzeFZqanUzMDF1bFZpQlNETXByZk9ycFBFaXotTHdIS1JYZGcKdWFfbGF1bmNoX2lkPTE4MzYzM2ZjMjE4ODMwNTQyM2VjNzhmNwp0YWJsZV9pZD1CYWNCbzAwMDAwMDAwMDAxCnNpdGU9MQpqd3NoPWV5SnJhV1FpT2lJeE56TTVORFE0TkRBeE56azFJaXdpWVd4bklqb2lSVk15TlRZaWZRCnBsYXlfbW9kZT1yZWFsX21vbmV5Cg&amp;JSESSIONID=syn4wrf7xl7cg773sy2jo5s3gfrlkorz7657c094&amp;embedded" width="100%" height="100%" style="padding: 0px; margin: 0px; border: 0px none; position: fixed;" frameborder="0" scrolling="no" allowfullscreen=""></iframe>
+
+        <div id="stopPlayingMessage" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1>O jogo foi paralisado.</h1>
+				<div class="contentSubDiv">
+					<div class="message warningMessage">
+						Conforme solicitado, você foi desconectado. Obrigado por jogar.
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="closing_message" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1>O jogo foi paralisado.</h1>
+				<div class="contentSubDiv">
+					<div class="message warningMessage">
+						Conforme solicitado, você foi desconectado. Obrigado por jogar.
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="rc_message" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1>Verificação de realidade</h1>
+				<div class="contentSubDiv">
+					<div class="warningMessage">
+						<span id="rc_json_message"></span>
+						<br>
+						<br>
+						Você quer continuar jogando?
+						<br>
+					</div>
+					<center>
+						<button class="btn btn-success" id="keepPlayingReality">
+							Continuar jogando
+						</button>
+						<button class="btn btn-primary" id="stopPlayingReality">
+							Parar de jogar
+						</button>
+						
+					</center>
+				</div>
+			</div>
+		</div>
+
+		<div id="sl_message" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1>Verificar sessão</h1>
+				<div class="contentSubDiv">
+					<div class="warningMessage">
+						<span id="sl_json_message"></span>
+						<br>
+						<br>
+						Você quer continuar jogando?
+						<br>
+					</div>
+					<center>
+						<button class="btn btn-success" id="keepPlayingSession">
+							Continuar jogando
+						</button>
+						<button class="btn btn-primary" id="stopPlayingSession">
+							Parar de jogar
+						</button>
+						
+					</center>
+				</div>
+			</div>
+		</div>
+
+		<div id="egameMessage" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1>Limite de EGame excedido.</h1>
+				<div class="contentSubDiv">
+					<div class="warningMessage">
+						<span id="egameExceededMessage"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="genericGameMessageDiv" width="100%" height="90%" style="display:none">
+			<div class="content" style="color: #ffffff">
+				<h1><span id="genericGameMessageTitle"></span> </h1>
+				<div class="contentSubDiv">
+					<div class="warningMessage">
+						<span id="genericGameMessage"></span>
+					</div>
+				</div>
+				<center>
+					<button id="okGameMessage" class="btn-warning">
+						Ok
+					</button>
+				</center>
+			</div>
+		</div>
+
+		<div id="game-lock" class="game-locked-for-player-div" style="display: none">
+			<object class="locked-for-player-icon" data="/ps/static/images//Icon-Deny.svg"></object>
+			<div class="centered-warning">
+				Sorry, access to this game was restricted for your account
+			</div>
+			<div class="centered-message">
+				Please contact support for clarifications
+			</div>
+		</div>
+
+		<!-- removed for now, but leaving in case they change their minds
+		<div id="loggedOutMessage" width="100%" height="90%" style="display:none">
+		<div class="content">
+		<h1>Logged Out</h1>
+		<div class="contentSubDiv">
+		<div class="warningMessage">
+		You have logged out from another window or your session has timed out due to
+		inactivity.
+		</div>
+		</div>
+		</div>
+		</div>
+		-->
+
+
+		<script type="text/javascript">
+            var playForReal = true;
+
+            var sessionLimitTimerId = null;
+            var realityCheckTimerId = null;
+			var sessionKey = "NIZ4RA1BCTODR1F3HOW7DB5RN69KHFC5";
+			var providerId = "34";
+
+            // copy info from action bean to javascript vars
+
+
+            // global vars for game messages, holds a list of the viewed
+            // messages by id so that we don't view the same one twice
+            var viewedMessages = [];
+
+            // Checks the Generic game messages to see if there are any messages to display.
+            // Called on interval.
+			function checkGameUserLimit() {
+				console.log("Start checkGameUserLimit():: for providerId: " + providerId);
+				$.post("/ps/game/GameUserLimitCheck.action?providerId=" + providerId + "&sessionKey=" + sessionKey,
+						function(data) {
+							var jsonData = eval(data);
+							console.log("checkGameLockedForPlayer(): jsonData=" + JSON.stringify(jsonData));
+							if (jsonData == null || jsonData.isProviderLocked == undefined || jsonData.isProviderLocked == null) {
+								return;
+							}
+							var locked = jsonData.isProviderLocked;
+							console.log("Provider locked response: " + locked);
+							if (locked) {
+								$("#gameFrame").css("display", "none");
+								$("#game-lock").css("display", "block");
+								clearCheckIntervals();
+							}
+						}
+				);
+			}
+
+            function checkGameMessages() {
+                console.log("Start checkGameMessages()::");
+                // alert ("Checking Game messages .");
+                var gameMessageInterval = 5;
+                var secondsBack = gameMessageInterval + 5;
+				// Returns 200 status with empty body in every env except ssw calls.
+				// In order to perform limit check see checkGameUserLimit() function.
+				$.post("/ps/game/GameMessagesCheck.action?secondsBack=" + secondsBack + "&sessionKey="+sessionKey,
+                    function(data){
+                        var jsonData = eval(data);
+						console.log("checkGameMessages(): jsonData="+JSON.stringify(jsonData));
+                        //alert ("Status is " + jsonData.status);
+						if (jsonData == null || jsonData.messages == null || jsonData.messages.length == 0) {
+                            // alert("no messages");
+                            return;
+                        }
+                        var message = jsonData.messages[0];
+
+                        // alert(viewedMessages[message.id]);
+
+                        if (viewedMessages[message.id] == null) {
+                            // alert("viewing message, id= " + message.id + ", type=" + message.type);
+                            if (message.type == "HIT_LOSS_LIMIT") {
+								console.log("checkGameMessage(): HIT_LOSS_LIMIT");
+                                if (message.extraData == undefined) {
+                                    //alert("extra Data is undefined, so just display the message.");
+                                    $("#genericGameMessageTitle").html("Você atingiu seu limite de perdas");
+                                    $("#genericGameMessage").html("Esta ação fará você atingir ou exceder o seu limite de perdas, ou lhe expor à responsabilidades além de seus restrições autoimpostas. Você pode rever suas restrições autoimpostas na seção de jogo responsável, parar de jogar ou continuar a jogar com apostas mais baixas.");
+                                    $("#genericGameMessageDiv").show();
+                                    $("#gameFrame").css("display", "none");
+                                } else {
+                                    //alert("extra Data is defined, so getting");
+                                    var amountLimit = message.extraData.amountLimit;
+                                    //alert('amountLimit='+amountLimit);
+                                    var currentAmount = message.extraData.currentAmount;
+                                    //alert('currentAmount='+currentAmount);
+                                    var remainingAmount = message.extraData.remainingAmount;
+                                    //alert('remainingAmount='+remainingAmount);
+                                    var message = "Esta ação fará você atingir ou exceder o seu limite de perdas, ou lhe expor à responsabilidades além de seus restrições autoimpostas. Você pode rever suas restrições autoimpostas na seção de jogo responsável, parar de jogar ou continuar a jogar com apostas mais baixas. <br>Atual limite de perdas no período = {amountLimit}, Atuais perdas no período = {currentAmount}, and Perdas restantes = {remainingAmount}.";
+                                    //alert('message='+message);
+                                    message = message.replace("{amountLimit}",amountLimit);
+                                    message = message.replace("{currentAmount}",currentAmount);
+                                    message = message.replace("{remainingAmount}",remainingAmount);
+                                    //alert('The modified message='+message);
+                                    $("#genericGameMessageTitle").html("Você atingiu seu limite de perdas");
+                                    $("#genericGameMessage").html(message);
+                                    $("#genericGameMessageDiv").show();
+                                    $("#gameFrame").css("display", "none");
+                                    //alert('Done');
+                                }
+                            } else  if (message.type == "HIT_WAGER_LIMIT") {
+								console.log("checkGameMessage(): HIT_WAGER_LIMIT");
+								if (message.extraData == undefined) {
+									// alert("extra Data is undefined, so just display the message.");
+									$("#genericGameMessageTitle").html("Você atingiu seu limite de apostas.");
+									$("#genericGameMessage").html("Esta ação fará você atingir ou exceder o seu limite de apostas, ou lhe expor à responsabilidades além de seus restrições autoimpostas. Você pode rever suas restrições autoimpostas na seção de jogo responsável, parar de jogar ou continuar a jogar com apostas mais baixas.");
+									$("#genericGameMessageDiv").show();
+									$("#gameFrame").css("display", "none");
+								} else {
+									// alert("extra Data is defined, so getting");
+									var amountLimit = message.extraData.amountLimit;
+									var currentAmount = message.extraData.currentAmount;
+									var remainingAmount = message.extraData.remainingAmount;
+									var message = "Esta ação fará você atingir ou exceder o seu limite de apostas, ou lhe expor à responsabilidades além de seus restrições autoimpostas. Você pode rever suas restrições autoimpostas na seção de jogo responsável, parar de jogar ou continuar a jogar com apostas mais baixas. <br>Atual limite de apostas no período = {amountLimit}, Atuais perdas no período = {currentAmount}, and Apostas restantes = {remainingAmount}.";
+									message = message.replace("{amountLimit}", amountLimit);
+									message = message.replace("{currentAmount}", currentAmount);
+									message = message.replace("{remainingAmount}", remainingAmount);
+									// alert('The modified message='+message);
+									$("#genericGameMessageTitle").html("Você atingiu seu limite de apostas.");
+									$("#genericGameMessage").html(message);
+									$("#genericGameMessageDiv").show();
+									$("#gameFrame").css("display", "none");
+								}
+							} else if (message.type == "START_USE_PLAYABLE_BONUS") {
+                                console.log("checkGameMessage(): START_USE_PLAYABLE_BONUS");
+                                $("#genericGameMessageTitle").html("");
+                                $("#genericGameMessage").html("");
+                                $("#genericGameMessageDiv").show();
+                                $("#gameFrame").css("display", "none");
+							}else if (message.type == "HIT_GAME_TIME_LIMIT") {
+								console.log("checkGameMessage(), HIT_GAME_TIME_LIMIT");
+								$("#genericGameMessageTitle").html("");
+								$("#genericGameMessage").html("");
+								$("#genericGameMessageDiv").show();
+								$("#gameFrame").css("display", "none");
+							}
+                            viewedMessages[message.id] = "true";
+                        } else {
+                            // alert("already viewed message id= " + message.id + ", type=" + message.type);
+                        }
+                    }
+                )
+            }
+
+            function logout() {
+                console.log("logging out...");
+                window.parent.postMessage({"m": "userlogout"},"*");
+                $.get("/ps/Logout.action?_eventName=ajaxLogout");
+            }
+
+            function reloadBalance() {
+                console.log("checking reloadBalance...");
+                var frames = document.getElementsByTagName("iframe");
+                for (i = 0; i < frames.length; ++i)
+                {
+                    //Make sure it is the same domain.
+                    if (frames[i].src.toLowerCase().indexOf(document.domain)>=0) {
+                        if ( typeof (frames[i].contentWindow.reloadBalance) != "undefined") {
+                            frames[i].contentWindow.reloadBalance();
+                        }
+                    }
+                }
+            }
+
+            function closeCurrentWindow() {
+                window.opener=window.open('','_parent','');
+                window.opener.close();
+            }
+
+            function stopPlaying() {
+                console.log("stopPlaying...");
+                logout();
+                if (false) {
+                    // Stop Auto Play for MG UK Desktop players
+                    document.getElementById('gameFrame').contentWindow.postMessage("StopGamePlay", "https://quickfire9.gameassists.co.uk");
+                }
+                hideAllMessages();
+                $("#closing_message").show();
+                $("#gameFrame").hide();
+                clearCheckIntervals();
+                window.setTimeout(closeCurrentWindow , 5000);
+            }
+
+            // hide all messages and expand the iframe
+            function keepPlaying() {
+                hideAllMessages();
+                $("#gameFrame").css("display", "block");
+                console.log("microgamingUKDesktop:" + false);
+                if (false) {
+                    // Restart Auto Play for MG UK Desktop players
+                    document.getElementById('gameFrame').contentWindow.postMessage("ReStartGamePlay", "https://quickfire9.gameassists.co.uk");
+                }
+            }
+
+            function hideAllMessages() {
+                $("#sl_message").hide();
+                $("#rc_message").hide();
+                $("#genericGameMessageDiv").hide();
+                $("#egameMessage").hide();
+            }
+
+            $(function() {
+                $("#keepPlayingSession").click(function() {
+                    keepPlaying();
+                });
+                $("#keepPlayingReality").click(function() {
+                    keepPlaying();
+                });
+                $("#stopPlayingReality").click(function() {
+                    stopPlaying();
+                });
+                $("#stopPlayingSession").click(function() {
+                    stopPlaying();
+                });
+                $("#okGameMessage").click(function() {
+                    keepPlaying();
+                });
+
+
+                function unloadWindow() {
+                    // alert ("Unloading now");
+                    // do a synchronous post so that it will have time to
+                    // complete the callback before we close the window
+                    $.ajax({
+                        url: "/ps/game/GameCloseCallback.action",
+                        async:   false,
+                        type: 'POST'
+                    });
+                }
+                window.onbeforeunload = unloadWindow;
+
+                // alert(I18N_Messages['global.username']);
+
+            });
+
+            function displayRealityCheck() {
+                console.log("checking displayRealityCheck...");
+                $.get("/ps/game/GameSessionInfo.action?sessionKey=NIZ4RA1BCTODR1F3HOW7DB5RN69KHFC5",
+                    function(data){
+                        var jsonData = eval(data);
+                        $("#rc_message").show();
+                        $("#gameFrame").css("display", "none");
+                        $("#rc_json_message").html(jsonData.message + " " + jsonData.winLossMessage);
+                        if (false) {
+                            // Stop Auto Play for MG UK Desktop players
+                            document.getElementById('gameFrame').contentWindow.postMessage("StopGamePlay", "https://quickfire9.gameassists.co.uk");
+                        }
+                    }
+                );
+
+                // set up the timer to display the next one using the default session limit interval
+                realityCheckTimerId = setTimeout("displayRealityCheck()", realityCheckIntervalSecs * 1000);
+            }
+
+            function displaySessionLimit() {
+                console.log("checking GameSessionInfo...");
+                $.get("/ps/game/GameSessionInfo.action?sessionKey=NIZ4RA1BCTODR1F3HOW7DB5RN69KHFC5",
+                    function(data){
+                        var jsonData = eval(data);
+                        $("#sl_message").show();
+                        $("#gameFrame").css("display", "none");
+                        $("#sl_json_message").html(jsonData.message);
+                        if (false) {
+                            // Stop Auto Play for MG UK Desktop players
+                            document.getElementById('gameFrame').contentWindow.postMessage("StopGamePlay", "https://quickfire9.gameassists.co.uk");
+                        }
+                    }
+                );
+                console.log("microgamingUKDesktop=" + false);
+                // set up the timer to display the next one using the default session limit interval
+                sessionLimitTimer = setTimeout("displaySessionLimit()", sessionLimitIntervalSecs * 1000);
+            }
+
+            /* Checks the EGame status and updates the display if the egame limit has been hit */
+            function checkEGameLimit() {
+                console.log("checking checkEGameLimit...");
+                $.get("/ps/game/EGameStatusCheck.action",
+                    function(data){
+                        var jsonData = eval(data);
+                        if (jsonData.status == "hitLimit") {
+                            $("#egameExceededMessage").html(jsonData.message);
+                            $("#egameMessage").show();
+                            $("#gameFrame").css("display", "none");
+                        }
+                    }
+                );
+            }
+
+            // enable all our checks if play for real, otherwise there will be no checks
+			console.log("playForReal="+playForReal);
+            if (playForReal) {
+                var realityCheckEnabled = false;
+                var realityCheckInterval = 60;
+                var sessionLimitEnabled = true;
+                var sessionLimitInterval = 0;
+                var timeSinceSessionStart = 3051;
+                var egameEnabled = "false";
+                var gameUserLimitCheckInterval = "120";
+
+                if (egameEnabled == "true") {
+                    //alert ("Egame is enabled.");
+                    setInterval("checkEGameLimit()", 5 * 1000);
+                } else {
+                    // alert ("Egame is not enabled.");
+                }
+
+
+                /* 		Start up the session and reality check events if enabled.
+                        the first display of session limit and reality check will depend on the session start time
+                        subsequent checks will come at the regular interval. For example if reality check is set to 60
+                        minutes and the current session time is at 1h 40 mins, then the first reality check in this container
+                        will occur at 20 mins, then at 60 mins after that (80 mins), then at 60 mins after that  (140 mins), ...
+                        Here we calculate when to do the first check and then when to do subsequent checks
+                 */
+
+                if (sessionLimitEnabled == true && sessionLimitInterval != 0) {
+                    var sessionLimitIntervalSecs= sessionLimitInterval * 60;
+                    var firstSessionLimit = sessionLimitIntervalSecs - (timeSinceSessionStart % (sessionLimitInterval * 60));
+                    // alert("firstSessionLimit=" + firstSessionLimit + ", sessionLimitIntervalSecs=" + sessionLimitIntervalSecs);
+                    sessionLimitTimerId = setTimeout("displaySessionLimit()", firstSessionLimit * 1000);
+                }
+                if (realityCheckEnabled == true && realityCheckInterval != 0) {
+                    var realityCheckIntervalSecs = realityCheckInterval * 60;
+                    var firstRealityCheck = realityCheckIntervalSecs - (timeSinceSessionStart % (realityCheckInterval * 60));
+                    console.log("firstRealityCheck=" + firstRealityCheck + ", realityCheckIntervalSecs=" + realityCheckIntervalSecs);
+                    realityCheckTimerId = setTimeout("displayRealityCheck()", firstRealityCheck * 1000);
+                }
+
+				// call game user limit check manually for the first time
+				checkGameUserLimit();
+                // set up our timers and intervals
+				var checkGameUserLimitIntervalId = setInterval("checkGameUserLimit()", gameUserLimitCheckInterval * 1000);
+                var checkGameMessagesIntervalId = setInterval("checkGameMessages()", 5 * 1000);
+
+                function clearCheckIntervals() {
+                    clearInterval(checkGameUserLimitIntervalId);
+                    clearInterval(checkGameMessagesIntervalId);
+                    if (realityCheckTimerId) {
+                        clearTimeout(realityCheckTimerId);
+                    }
+                    if (sessionLimitTimerId) {
+                        clearTimeout(sessionLimitTimerId);
+                    }
+                }
+
+            }
+
+            function listener(event) {
+                if (event.data.method !== null && typeof event.data.method !== 'undefined' && event.data.method.length !== 0) {
+                    var e = event.data;
+                    switch(e.method){
+                        case 'autoheight':
+                            var iframe = document.getElementById("gameFrame");
+                            iframe.height = e.params.height + "px";
+                            window.parent.postMessage({"m": "autoheight", "p": { "height": e.params.height}},"*");
+                            break;
+
+                        case 'statechangeCallback':
+                            window.parent.postMessage({"m": "statechangeCallback", "s": e.state},"*");
+                            break;
+
+                        case 'biaload':
+                            window.parent.postMessage({"m": "biaload", "load": "load"},"*");
+                            break;
+
+                        case 'showPrelive':
+                            //console.log("gameContainer - showPrelive");
+                            //console.log(e.params);
+                            var chlid_iframe = document.getElementById('gameFrame');
+                            chlid_iframe.contentWindow.postMessage({ "method": "showPrelive", "params": e.params },"*");
+                            break;
+							
+						case 'reloadCallback':
+							window.location.reload(true);
+							break;
+
+					}
+				}
+			}
+
+			function onExitGamePlatformEGT() {
+				hideAllMessages();
+				window.top.location.href = "";
+			}
+
+			function onReloadGamePlatformEGT() {
+				hideAllMessages();
+				window.top.location.href = "";
+			}
+
+			function receiveMessage(event) {
+				if (event.data && event.data.command == 'com.egt-bg.exit') {
+					onExitGamePlatformEGT();
+				} else if (event.data && event.data.command == 'com.egt-bg.reload') {
+					onReloadGamePlatformEGT();
+				}
+			}
+
+			if (window.addEventListener) {
+				window.addEventListener("message", listener, false);
+				window.addEventListener("message", receiveMessage, false);
+			} else {
+				window.attachEvent("onmessage", listener);
+			}
+		</script>
+
+	
+
+    <div class="beautyTipsStyle"></div>
+
+    <div class="loading"></div>
+
+    
+    
+
+</body></html>
